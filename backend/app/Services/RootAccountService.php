@@ -18,8 +18,17 @@ class RootAccountService {
          return $create;
      }
 
-     public function DeleteRoot(array $data): RootAccount {
+     public function deleteRoot(int $data) {
 
+        $delete = RootAccount::findOrFail($data);
+                            
+        $delete->delete();
+
+         if (!$delete) {
+            throw new Exception('Failed to delete account! Please try again.');
+         }
+
+         return $delete;
      }
 }
 
