@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import RootHome from "./page/RootHome.tsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={}/>
+        <Route path="/root" element={<RootHome/>}/>
       </Routes>
     </BrowserRouter>
   );
