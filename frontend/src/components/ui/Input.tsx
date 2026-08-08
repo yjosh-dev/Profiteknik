@@ -1,11 +1,15 @@
+import { FaUserCircle } from "react-icons/fa";
+
 type InputProps = {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
   name: string;
+  text: string;
+  icon?: React.ReactNode;
 };
 
 export default function Input({
@@ -14,20 +18,25 @@ export default function Input({
   type = "text",
   placeholder,
   disabled,
-  className = "",
+  className,
   name = "",
+  text = "",
+  icon,
 }: InputProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor="input" className="font-semibold">
-        {name}
-      </label>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1">
+        {icon}
+        <label htmlFor={name} className="font-semibold">
+          {text}
+        </label>
+      </div>
       <input
-        id="input"
-        name="input"
+        id={name}
+        name={name}
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
         className={`flex h-8 rounded-md border border-input bg-background px-3 py-2 text-sm 

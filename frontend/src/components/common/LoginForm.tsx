@@ -9,51 +9,70 @@ import logo from "../../assets/logo/profiteknik_logo.svg";
 import { MdOutlineLogin } from "react-icons/md";
 import { MdError } from "react-icons/md";
 import { FaCircleCheck } from "react-icons/fa6";
+import { FaUserCircle } from "react-icons/fa";
+import { RiLockPasswordFill } from "react-icons/ri";
 
 import { rootAuth } from "../../service/api/auth/rootAuth";
 
 import StatusModal from "../ui/StatusModal";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
-  const [data, setData] = useState();
+  const [showPassword, setShowPassword] = useState("password");
 
   const handleClick = async (email: string, password: string) => {
     try {
       const result = await rootAuth.authLogin(email, password);
-      setData(result.data);
       setSuccess(true);
-      console.log(data)
     } catch (err) {
       setError(true);
     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
   };
 
   return (
     <Card className="gap-3 min-w-sm justify-center py-10">
       <img src={logo} className="" />
       <Input
-        value={email}
-        onChange={setEmail}
-        name="Root Username"
+        value={formData.username}
+        onChange={handleChange}
+        name="username"
+        text="Username"
+        icon={<FaUserCircle size={18} />}
         className="min-w-xs"
         type="text"
         placeholder="Enter your account username"
       />
       <Input
-        value={password}
-        onChange={setPassword}
-        name="Root Password"
+        value={formData.password}
+        onChange={handleChange}
+        name="password"
+        text="Password"
+        icon={<RiLockPasswordFill size={18} />}
         className="min-w-xs"
-        type="password"
+        type={showPassword}
         placeholder="Enter your account password"
       />
+      <span className="min-w-xs bg-black"></span>
       <Button
-        onClick={() => handleClick(email, password)}
-        className="py-2 px-24 bg-black min-w-xs my-2"
+        onClick={() => handleClick(formData.username, formData.password)}
+        className="py-2 px-24 bg-black min-w-xs my-2 rounded-md text-white
+           transition-all duration-200 ease-in-out
+           hover:bg-neutral-800 hover:scale-[1.02] hover:shadow-md
+           active:scale-95 active:bg-neutral-900
+           cursor-pointer"
       >
         <MdOutlineLogin size={22} />
         Login
