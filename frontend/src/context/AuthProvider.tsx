@@ -1,4 +1,6 @@
 import { create } from "axios";
+import { useContext } from "react";
+
 import React, { useState, createContext } from "react";
 
 type AuthDataProps = {
@@ -27,3 +29,4 @@ export default function AuthProvider({ children }: AuthProviderContent) {
     </AuthContext.Provider>
   );
 }
+

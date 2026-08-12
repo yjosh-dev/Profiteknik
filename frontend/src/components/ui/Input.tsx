@@ -1,5 +1,3 @@
-import { FaUserCircle } from "react-icons/fa";
-
 type InputProps = {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;

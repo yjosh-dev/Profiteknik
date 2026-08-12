@@ -1,4 +1,6 @@
 import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -9,33 +11,47 @@ import logo from "../../assets/logo/profiteknik_logo.svg";
 import { MdOutlineLogin } from "react-icons/md";
 import { MdError } from "react-icons/md";
 import { FaCircleCheck } from "react-icons/fa6";
-import { FaUserCircle } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RiLockPasswordFill } from "react-icons/ri";
 
 import { rootAuth } from "../../service/api/auth/rootAuth";
 
 import StatusModal from "../ui/StatusModal";
 
+import { validatePasswordInput } from "../../utils/AuthInputValidation";
+
 export default function LoginForm() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
 
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState("password");
 
   const handleClick = async (email: string, password: string) => {
     try {
       const result = await rootAuth.authLogin(email, password);
+      localStorage.setItem("token", result.data.data);
+      navigate("/root/dash");
       setSuccess(true);
-    } catch (err) {
-      setError(true);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          error.response?.data?.message ??
+          "Something went wrong. Please try again.";
+        setError(message);
+      }
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pass = validatePasswordInput(e.target.value);
+    if (!pass) {
+      console.log("Input must be 4 characters or above")
+    }
     setFormData({
       ...formData,
       [e.target.id]: e.target.value,
@@ -65,7 +81,9 @@ export default function LoginForm() {
         type={showPassword}
         placeholder="Enter your account password"
       />
-      <span className="min-w-xs bg-black"></span>
+
+      <div>{/* to be added. show password and forgot password */}</div>
+
       <Button
         onClick={() => handleClick(formData.username, formData.password)}
         className="py-2 px-24 bg-black min-w-xs my-2 rounded-md text-white
@@ -94,9 +112,9 @@ export default function LoginForm() {
         <div className="w-screen h-screen flex items-center justify-center absolute z-99 bg-black/80 backdrop-blur-xs">
           <StatusModal
             icon={<MdError size={54} color="#a61124" />}
-            onClick={() => setError(false)}
+            onClick={() => setError(null)}
             heading="Login failed"
-            description="Incorrect account username or password. Please try again."
+            description={error}
             button_name="close"
             button_color="bg-[#a61124]"
           />

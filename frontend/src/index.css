@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+:root {
+    --component-gray: "#EDE9E6"
+}
+
+.component {
+    background-color: #EDE9E6;
+    border-radius: 12px;
+}

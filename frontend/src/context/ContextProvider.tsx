@@ -1,4 +1,4 @@
-import AuthProvider from "./authProvider";
+import AuthProvider from "./AuthProvider";
 
 type ContextProviderProps = {
   children: React.ReactNode;
@@ -6,8 +6,6 @@ type ContextProviderProps = {
 
 export default function ContextProvider({ children }: ContextProviderProps) {
   return (
-    <ContextProvider>
       <AuthProvider>{children}</AuthProvider>
-    </ContextProvider>
   );
 }
