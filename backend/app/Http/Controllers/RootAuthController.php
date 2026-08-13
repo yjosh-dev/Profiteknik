@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use Illuminate\Http\Request;
 use App\Http\Requests\RootAuthRequest;
 use App\Services\RootAuthService;
@@ -25,10 +26,9 @@ class RootAuthController extends Controller
           ], 200);
 
        }catch(Exception $e){
-
           return response()->json([
              'success' => false,
-             'message' => $e.getMessage(),
+             'message' => $e->getMessage(),
           ], 401);
 
        }

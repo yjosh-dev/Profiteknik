@@ -28,10 +28,8 @@ class RootAuthService
         $hashToCheck = $account->password ?? '$2y$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcKf7gp728F9E585V.46SjZJuWu';
 
      
-        if (
-            !$this->passwordCheck($data['password'], $hashToCheck) ||
-            !$account
-        ) {
+        if (!$this->passwordCheck($data['password'], $hashToCheck) || !$account) 
+        {
             RateLimiter::increment($key, 60);
 
             throw new Exception(

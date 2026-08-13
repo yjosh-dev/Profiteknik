@@ -1,32 +1,37 @@
-import { create } from "axios";
-import { useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-import React, { useState, createContext } from "react";
-
-type AuthDataProps = {
-  user: { name: string; id: string; role: string };
+type AuthDataType = {
+  user?: { name: string; role: string };
   token: string;
 } | null;
 
-type AuthContextProps = {
-  authData: AuthDataProps;
-  setAuthData: React.Dispatch<React.SetStateAction<AuthDataProps>>;
+type AuthContextType = {
+  authData: AuthDataType;
+  setAuthData: React.Dispatch<React.SetStateAction<AuthDataType>>;
 };
 
-type AuthProviderContent = {
+type AuthProviderType = {
   children: React.ReactNode;
 };
 
-export const AuthContext = createContext<AuthContextProps | undefined>(
+export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
 
-export default function AuthProvider({ children }: AuthProviderContent) {
-  const [authData, setAuthData] = useState<AuthDataProps>(null);
+export default function AuthProvider({ children }: AuthProviderType) {
+  const [authData, setAuthData] = useState<AuthDataType>(null);
   return (
     <AuthContext.Provider value={{ authData, setAuthData }}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function UseAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context
 }
 

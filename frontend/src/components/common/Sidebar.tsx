@@ -2,7 +2,11 @@ import { useState } from "react";
 
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
 
-import { MdOutlineArrowLeft, MdOutlineArrowRight, MdManageAccounts  } from "react-icons/md";
+import {
+  MdOutlineArrowLeft,
+  MdOutlineArrowRight,
+  MdManageAccounts,
+} from "react-icons/md";
 import { SiSimpleanalytics } from "react-icons/si";
 
 type SidebarType = {
@@ -16,8 +20,8 @@ type RenderType = {
 };
 
 let contents = [
-  { title: "Analytics", icon: <SiSimpleanalytics size={14} /> },
-  { title: "Employee Management", icon: <MdManageAccounts size={14} /> },
+  { title: "Analytics", icon: <SiSimpleanalytics size={16} /> },
+  { title: "Employees", icon: <MdManageAccounts size={16} /> },
 ];
 
 export default function Sidebar({ handleMinimize, isA }: SidebarType) {
@@ -56,12 +60,14 @@ export default function Sidebar({ handleMinimize, isA }: SidebarType) {
 }
 
 function RenderContent({ content, isA }: RenderType) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <div className="flex flex-col gap-4 pt-3">
       {isA ? (
         <>
           {content.map((item) => (
-            <div className="hover:bg-gray-300 flex items-center justify-between px-3 font-medium">
+            <div className="hover:bg-gray-300 hover:border-l-3 hover:border-red-700 hover:p-2 flex items-center justify-between font-medium px-3">
               <p className="text-sm">{item.title}</p>
               {item.icon}
             </div>
@@ -70,7 +76,10 @@ function RenderContent({ content, isA }: RenderType) {
       ) : (
         <>
           {content.map((item) => (
-            <div className="hover:bg-gray-300 rounded-xl flex items-center justify-center">
+            <div
+              className="hover:bg-gray-300 hover:w-8 hover:p-2 rounded-xl flex items-center justify-center"
+              onMouseEnter={() => setHovered(true)}
+            >
               {item.icon}
             </div>
           ))}

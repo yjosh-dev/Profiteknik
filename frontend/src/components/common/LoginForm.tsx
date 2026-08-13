@@ -19,6 +19,7 @@ import { rootAuth } from "../../service/api/auth/rootAuth";
 import StatusModal from "../ui/StatusModal";
 
 import { validatePasswordInput } from "../../utils/AuthInputValidation";
+import { UseAuth } from "../../context/AuthProvider";
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -30,11 +31,15 @@ export default function LoginForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState("password");
-
+  const { setAuthData } = UseAuth();
   const handleClick = async (email: string, password: string) => {
     try {
       const result = await rootAuth.authLogin(email, password);
       localStorage.setItem("token", result.data.data);
+      setAuthData({
+        user: { name: "joshua", role: "ceo" },
+        token: result.data.data,
+      });
       navigate("/root/dash");
       setSuccess(true);
     } catch (error) {
@@ -50,7 +55,7 @@ export default function LoginForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const pass = validatePasswordInput(e.target.value);
     if (!pass) {
-      console.log("Input must be 4 characters or above")
+      console.log("Input must be 4 characters or above");
     }
     setFormData({
       ...formData,
