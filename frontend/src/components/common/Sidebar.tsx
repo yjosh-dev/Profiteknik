@@ -8,23 +8,40 @@ import {
   MdManageAccounts,
 } from "react-icons/md";
 import { SiSimpleanalytics } from "react-icons/si";
+import { IoIosSave } from "react-icons/io";
+import { AiFillDashboard } from "react-icons/ai";
+import Tooltip from "../ui/Tooltip";
 
 type SidebarType = {
   handleMinimize: () => void;
-  isA: boolean;
+  isActive: boolean;
 };
 
 type RenderType = {
-  content: { title: string; icon: React.ReactNode }[];
-  isA: boolean;
+  content: menuItemType;
+  isActive: boolean;
 };
 
-let contents = [
-  { title: "Analytics", icon: <SiSimpleanalytics size={16} /> },
-  { title: "Employees", icon: <MdManageAccounts size={16} /> },
+type menuItemType = {
+  section: string;
+  contents: { name: string; icon: React.ReactNode }[];
+}[];
+
+let menuItems = [
+  {
+    section: "Analytics",
+    contents: [{ name: "Dashboard", icon: <AiFillDashboard size={19} /> }],
+  },
+  {
+    section: "Employees",
+    contents: [
+      { name: "Manage", icon: <MdManageAccounts size={19} /> },
+      { name: "Register", icon: <IoIosSave size={19} /> },
+    ],
+  },
 ];
 
-export default function Sidebar({ handleMinimize, isA }: SidebarType) {
+export default function Sidebar({ handleMinimize, isActive }: SidebarType) {
   return (
     <div className="w-full h-full flex items-center">
       {/* navbar content */}
@@ -34,7 +51,7 @@ export default function Sidebar({ handleMinimize, isA }: SidebarType) {
         {/* image and text container */}
         <div className="flex flex-col items-center justify-center gap-2">
           <img src={logo} className="w-13 h-13 " />
-          {isA && (
+          {isActive && (
             <p className="font-bold text-sm tracking-widest uppercase text-gray-800">
               Profiteknik Corp
             </p>
@@ -42,14 +59,14 @@ export default function Sidebar({ handleMinimize, isA }: SidebarType) {
         </div>
         {/* end of image and text container */}
         <hr className="text-gray-400" />
-        <RenderContent content={contents} isA={isA} />
+        <RenderContent content={menuItems} isActive={isActive} />
       </div>
       {/* minimize button */}
       <div
         className="rounded-full w-8 h-8 shadow-md border border-gray-200 component -ml-3 flex items-center justify-center -mr-2"
         onClick={handleMinimize}
       >
-        {isA ? (
+        {isActive ? (
           <MdOutlineArrowLeft size={70} />
         ) : (
           <MdOutlineArrowRight size={70} />
@@ -58,33 +75,89 @@ export default function Sidebar({ handleMinimize, isA }: SidebarType) {
     </div>
   );
 }
+import { useEffect } from "react";
 
-function RenderContent({ content, isA }: RenderType) {
-  const [hovered, setHovered] = useState(false);
-
+function RenderContent({ content, isActive }: RenderType) {
+  // this function is for inactive menu where every content[i].content is separated
+  const sortedMenu = sortNestedContents(content);
+  const [hovered, setHovered] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-4 pt-3">
-      {isA ? (
+      {isActive ? (
         <>
-          {content.map((item) => (
-            <div className="hover:bg-gray-300 hover:border-l-3 hover:border-red-700 hover:p-2 flex items-center justify-between font-medium px-3">
-              <p className="text-sm">{item.title}</p>
-              {item.icon}
+          {content.map((item, index) => (
+            <div className="flex flex-col">
+              <p
+                className="font-bold text-base tracking-wider  text-gray-800 mb-2"
+                key={index}
+              >
+                {item.section}
+              </p>
+              {item.contents.map((contents, index) => (
+                <div className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md">
+                  <p className="text-base font-medium text-gray-700">
+                    {contents.name}
+                  </p>
+                  {contents.icon}
+                </div>
+              ))}
             </div>
           ))}
         </>
       ) : (
         <>
-          {content.map((item) => (
-            <div
-              className="hover:bg-gray-300 hover:w-8 hover:p-2 rounded-xl flex items-center justify-center"
-              onMouseEnter={() => setHovered(true)}
-            >
-              {item.icon}
+          <div className="flex flex-col gap-3">
+            {sortedMenu.map((contents) => (
+              <div
+                className="flex items-center justify-between px-3 hover:font-bold py-1  
+                hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
+                onMouseEnter={() => setHovered(contents.name)}
+                onMouseLeave={() => setHovered(null)}
+              >
+                {hovered == contents.name && (
+                  <div className="absolute left-15">
+                    <Tooltip type="horizontal" text={contents.name} />
+                  </div>
+                )}
+                {contents.icon}
+              </div>
+            ))}
+          </div>
+          {/* {content.map((item, index) => (
+            <div className="">
+              {item.contents.map((contents, index) => (
+                <div
+                  className="flex items-center justify-between px-3 hover:font-bold py-1 
+                hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
+                  onMouseEnter={() => setHovered(contents.name)}
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  {hovered == contents.name && (
+                    <div className="absolute left-15">
+                      <Tooltip type="horizontal" text={contents.name} />
+                    </div>
+                  )}
+                  {contents.icon}
+                </div>
+              ))}
             </div>
-          ))}
+          ))}*/}
         </>
       )}
     </div>
   );
 }
+
+const sortNestedContents = (content: menuItemType) => {
+  let sortedContents = [];
+
+  for (let i = 0; i < content.length; i++) {
+    for (let j = 0; j < content[i].contents.length; j++) {
+      sortedContents.push({
+        name: content[i].contents[j].name,
+        icon: content[i].contents[j].icon,
+      });
+    }
+  }
+  return sortedContents;
+};
