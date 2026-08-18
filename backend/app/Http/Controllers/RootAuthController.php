@@ -40,4 +40,11 @@ class RootAuthController extends Controller
 
          return $logout;
     }
+
+    public function verifyMe(Request $request)
+    {
+       $verify = $this->rootAuthService->verifyRoot($request);
+
+       return $verify;
+    }
 }

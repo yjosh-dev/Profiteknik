@@ -14,7 +14,10 @@ Route::prefix('/root')->group(function () {
     //auth related
     Route::prefix('/auth')->controller(RootAuthController::class)->group(function (){
         Route::post('/login', 'authLogin');
-        Route::post('/logout', 'authLogout')->middleware('auth:sanctum');
+        Route::middleware('auth:sanctum')->group(function () {
+          Route::post('/logout', 'authLogout');
+          Route::get('/me', 'verifyMe');
+        });
     }); 
 });
 

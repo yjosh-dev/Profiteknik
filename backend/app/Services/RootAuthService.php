@@ -62,6 +62,20 @@ class RootAuthService
         return $username->username;
     }
 
+    public function verifyRoot($user)
+    {
+       $user = $user->user();
+       $data = [
+          "id" => $user->id,
+          "first_name" => $user->first_name,
+          "middle_name" => $user->middle_name,
+          "last_name" => $user->last_name,
+          "role" => "root"
+       ];
+
+       return $data;
+    }
+
     private function usernameCheck($username)
     {
         return RootAccount::where('username', $username)->first();
