@@ -23,6 +23,7 @@ import { UseAuth } from "../../context/AuthProvider";
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -34,6 +35,7 @@ export default function LoginForm() {
   const { setAuthData } = UseAuth();
   const handleClick = async (email: string, password: string) => {
     try {
+        setIsLoading(true);
       const result = await rootAuth.authLogin(email, password);
       localStorage.setItem("token", result.data.data);
       setAuthData({
@@ -43,12 +45,15 @@ export default function LoginForm() {
       navigate("/root/dash");
       setSuccess(true);
     } catch (error) {
+      setIsLoading(false);
       if (axios.isAxiosError(error)) {
         const message =
           error.response?.data?.message ??
           "Something went wrong. Please try again.";
         setError(message);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,7 +76,7 @@ export default function LoginForm() {
         onChange={handleChange}
         name="username"
         text="Username"
-        icon={<FaUserCircle size={18} />}
+        icon={<FaUserCircle size={17} />}
         className="min-w-xs"
         type="text"
         placeholder="Enter your account username"
@@ -81,7 +86,7 @@ export default function LoginForm() {
         onChange={handleChange}
         name="password"
         text="Password"
-        icon={<RiLockPasswordFill size={18} />}
+        icon={<RiLockPasswordFill size={17} />}
         className="min-w-xs"
         type={showPassword}
         placeholder="Enter your account password"
@@ -90,14 +95,20 @@ export default function LoginForm() {
       <div>{/* to be added. show password and forgot password */}</div>
 
       <Button
+        disabled={isLoading}
         onClick={() => handleClick(formData.username, formData.password)}
-        className="py-2 px-24 bg-black min-w-xs my-2 rounded-md text-white
+        className="bg-black
+           py-2 px-24 min-w-xs my-2 rounded-md text-white
            transition-all duration-200 ease-in-out
            hover:bg-neutral-800 hover:scale-[1.02] hover:shadow-md
            active:scale-95 active:bg-neutral-900
            cursor-pointer"
       >
-        <MdOutlineLogin size={22} />
+        {isLoading ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+        ) : (
+          <MdOutlineLogin size={22} />
+        )}
         Login
       </Button>
 
