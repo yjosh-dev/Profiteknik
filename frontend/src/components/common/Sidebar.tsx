@@ -86,7 +86,7 @@ function RenderContent({ content, isActive }: RenderType) {
       {isActive ? (
         <>
           {content.map((item, index) => (
-            <div className="flex flex-col">
+            <div className="flex flex-col" key={index}>
               <p
                 className="font-bold text-base tracking-wider  text-gray-800 mb-2"
                 key={index}
@@ -94,7 +94,7 @@ function RenderContent({ content, isActive }: RenderType) {
                 {item.section}
               </p>
               {item.contents.map((contents, index) => (
-                <div className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md">
+                <div className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md" key={index}>
                   <p className="text-base font-medium text-gray-700">
                     {contents.name}
                   </p>
