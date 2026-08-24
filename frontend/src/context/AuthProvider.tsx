@@ -1,8 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-type AuthDataType = {
-  user?: { name: string; role: string };
-  token: string;
+export type UserType = {
+    name: string,
+    id: string,
+    role: string
+}
+
+export type AuthDataType = {
+  user?: {name: string, id: string, role: string}
 } | null;
 
 type AuthContextType = {
