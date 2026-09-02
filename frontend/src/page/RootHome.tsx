@@ -1,6 +1,5 @@
 import LoginForm from "../components/common/LoginForm";
 import { useEffect } from "react";
-import { UseAuth } from "../context/AuthProvider";
 
 export default function RootHome() {
   return (
