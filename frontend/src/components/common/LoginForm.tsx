@@ -31,13 +31,16 @@ export default function LoginForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState("password");
- 
+
+  const handleContinue = () => {
+    setSuccess(false)
+    navigate("/root/dash");
+  };
   const handleClick = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       const result = await rootAuth.authLogin(email, password);
       localStorage.setItem("token", result.data.data);
-      navigate("/root/dash");
       setSuccess(true);
     } catch (error) {
       setIsLoading(false);
@@ -111,7 +114,7 @@ export default function LoginForm() {
         <div className="w-screen h-screen flex items-center justify-center absolute z-99 bg-black/80 backdrop-blur-xs">
           <StatusModal
             icon={<FaCircleCheck size={54} color="#25b041" />}
-            onClick={() => setSuccess(false)}
+            onClick={() => handleContinue()}
             heading="Login success"
             description="Login successfully. Please continue to redirect page"
             button_name="Continue"
@@ -119,6 +122,7 @@ export default function LoginForm() {
           />
         </div>
       )}
+
       {error && (
         <div className="w-screen h-screen flex items-center justify-center absolute z-99 bg-black/80 backdrop-blur-xs">
           <StatusModal
