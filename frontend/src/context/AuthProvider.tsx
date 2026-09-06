@@ -1,42 +1,67 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
+import { rootAuth } from "../service/api/auth/rootAuth";
 
-export type UserType = {
-    name: string,
-    id: string,
-    role: string
-}
-
-export type AuthDataType = {
-  user?: {name: string, id: string, role: string}
+type UserType = {
+  userData: { name: string; role: string; id: string };
 } | null;
 
 type AuthContextType = {
-  authData: AuthDataType;
-  setAuthData: React.Dispatch<React.SetStateAction<AuthDataType>>;
-};
-
-type AuthProviderType = {
-  children: React.ReactNode;
+  userData: UserType;
+  setUserData: React.Dispatch<React.SetStateAction<UserType>>;
+  loading: boolean;
+  unauthenticated: boolean;
+  checkAuth: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
 
-export default function AuthProvider({ children }: AuthProviderType) {
-  const [authData, setAuthData] = useState<AuthDataType>(null);
+export default function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [userData, setUserData] = useState<UserType>(null);
+  const [loading, setLoading] = useState(true);
+  const [unauthenticated, setUnauthenticated] = useState(true);
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      setUnauthenticated(true);
+      return;
+    }
+    try {
+      const verify = await rootAuth.verifyRoot(token);
+      setUserData({
+        userData: {
+          name: `${verify.data.first_name} ${verify.data.last_name}`,
+          id: verify.data.id,
+          role: verify.data.role,
+        },
+      });
+      setUnauthenticated(false);
+      setLoading(false);
+    } catch (error) {
+      console.error("Token verification failed:", error);
+      localStorage.removeItem("token");
+      setUnauthenticated(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ authData, setAuthData }}>
+    <AuthContext.Provider
+      value={{ userData, setUserData, loading, checkAuth, unauthenticated }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
-
-export function UseAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context
-}
-
