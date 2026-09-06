@@ -2,16 +2,17 @@ import Input from "../ui/Input";
 import { IoSearchSharp } from "react-icons/io5";
 import { IoMdMailUnread, IoMdNotifications } from "react-icons/io";
 import { useEffect, useState } from "react";
-import type { AuthDataType } from "../../context/AuthProvider";
 import { useActionData } from "react-router-dom";
+import { UseAuth } from "../../hooks/useAuth";
 
 export default function Header() {
+  const {userData} = UseAuth()
+  const data = userData?.userData
 
- 
   return (
     <div className="w-full h-full bg-[#EDE9E6] rounded-xl component flex items-center justify-between px-4">
       <SearchBar />
-      <ProfileBlock />
+      <ProfileBlock name={data?.name} role={data?.role}/>
     </div>
   );
 }
@@ -28,7 +29,12 @@ function SearchBar({ item }: { item?: string }) {
   );
 }
 
-function ProfileBlock() {
+type ProfileBlockProps = {
+  name?: string;
+  role?: string;
+};
+
+function ProfileBlock({name, role}: ProfileBlockProps) {
   const [dropdown, setDropdown] = useState(false);
   return (
     <div className="w-[30%] h-12 flex items-center gap-4">
@@ -44,8 +50,8 @@ function ProfileBlock() {
           onClick={() => setDropdown((prev) => !prev)}
         ></div>
         <div className="flex flex-col relative">
-          <p className="text-medium font-semibold">John Doe Martinez</p>
-          <p className="text-sm text-gray-600">Root Administrator </p>
+          <p className="text-medium font-semibold">{name ? name : "Loading....."}</p>
+          <p className="text-sm text-gray-600">{role ? role: "Loading...."} </p>
         </div>
         {dropdown && <DropdownMenu />}
       </div>
