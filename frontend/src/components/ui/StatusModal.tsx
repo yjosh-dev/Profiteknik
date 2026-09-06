@@ -10,6 +10,14 @@ type ModalProps = {
   button_color: string
 };
 
+//sample usage 
+// <StatusModal 
+//    heading="Invalid or expired token" 
+//    description="Your token is invalid or expired. Please try to login again" button_name="Hello" 
+//    icon={<MdError/>} 
+//    button_color="red"
+// />
+
 export default function StatusModal({
   heading,
   description,
