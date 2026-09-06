@@ -15,7 +15,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/root" element={<RootHome />} />
-          <Route element={<ProtectedRoute path="/root"/> }>
+          <Route element={<ProtectedRoute path="/root" />}>
             <Route path="/root/dash" element={<RootDashboard />} />
           </Route>
           <Route path="/test" element={<Test />} />
