@@ -1,11 +1,17 @@
-import { Navigate, Outlet, useActionData } from "react-router-dom";
+// layout/ProtectedRoute.tsx
 import { useEffect } from "react";
+import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { UseAuth } from "../hooks/useAuth";
+import Loading from "../components/common/Loading";
 
-type ProtectedRouteProps = {
-  path: string;
-};
+export default function ProtectedRoute({ path }: { path: string }) {
+  const navigate = useNavigate();
 
-export default function ProtectedRoute({ path }: ProtectedRouteProps) {
-  const token = localStorage.getItem("token");
-  return token  ? <Outlet /> : <Navigate to={path} replace />
+  const {loading, unauthenticated } = UseAuth();
+
+  if (loading) return <Loading />;
+
+  if (unauthenticated) return <Navigate to="/root" replace />;
+
+  return <Outlet />;
 }
