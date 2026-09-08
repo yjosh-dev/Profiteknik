@@ -11,14 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('root_account', function (Blueprint $table) {
-            $table->id();
+        Schema::create('employee_account', function (Blueprint $table) {
+            $table->id("employee_id");
             $table->string('username')->unique();
             $table->string('password');
-            $table->string('email')->unique();
-            $table->string('first_name');
-            $table->string('middle_name')->nullable();
-            $table->string('last_name');
+            $table->enum('status', ["active", "inactive", "deleted"])->default('active');
             $table->timestamp('last_login')->nullable();
             $table->timestamps();
         });
@@ -29,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('root_account');
+        Schema::dropIfExists('employee_account');
     }
 };
