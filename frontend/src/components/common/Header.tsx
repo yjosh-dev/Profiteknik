@@ -1,25 +1,29 @@
-import Input from "../ui/Input";
-import { IoSearchSharp } from "react-icons/io5";
-import { IoMdMailUnread, IoMdNotifications } from "react-icons/io";
 import { useEffect, useState } from "react";
 import { useActionData } from "react-router-dom";
+
+import { IoSearchSharp, IoLogOutSharp } from "react-icons/io5";
+import { IoMdMailUnread, IoMdNotifications, IoMdHelp } from "react-icons/io";
+import { MdOutlineKeyboardArrowRight } from "react-icons/md";
+import { FaUser } from "react-icons/fa";
+
+import Input from "../ui/Input";
 import { UseAuth } from "../../hooks/useAuth";
+import { CapitalizeFirst } from "../../utils/CapitalizeFirstLetter";
 
 export default function Header() {
-  const {userData} = UseAuth()
-  const data = userData?.userData
-
+  const { userData } = UseAuth();
+  const data = userData?.userData;
   return (
-    <div className="w-full h-full bg-[#EDE9E6] rounded-xl component flex items-center justify-between px-4">
+    <div className="w-full h-full bg-[#EDE9E6] rounded-xl component flex items-center justify-between px-6 pr-10 select-none">
       <SearchBar />
-      <ProfileBlock name={data?.name} role={data?.role}/>
+      <ProfileBlock user={data?.name} role={data?.role} />
     </div>
   );
 }
 
 function SearchBar({ item }: { item?: string }) {
   return (
-    <div className="w-[40%] h-10 bg-white rounded-xl outline-0 px-3 font-medium text-base flex  items-center">
+    <div className="w-[40%] h-10 bg-white rounded-xl outline-0 px-3 font-medium text-base flex items-center ">
       <IoSearchSharp />
       <input
         className="w-[80%] h-10 bg-white rounded-xl outline-0 px-3 font-medium text-base flex"
@@ -30,37 +34,82 @@ function SearchBar({ item }: { item?: string }) {
 }
 
 type ProfileBlockProps = {
-  name?: string;
+  user?: string;
   role?: string;
 };
 
-function ProfileBlock({name, role}: ProfileBlockProps) {
+type DropDownSelectionType = {
+  icon: React.ReactNode;
+  title: string;
+  onClick?: () => void;
+};
+
+function ProfileBlock({ user, role }: ProfileBlockProps) {
   const [dropdown, setDropdown] = useState(false);
   return (
-    <div className="w-[30%] h-12 flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200">
+    <div className="w-[30%] h-12 flex items-center justify-end gap-4">
+      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 cursor-pointer">
         <IoMdMailUnread size={22} className="text-gray-600" />
       </div>
-      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200">
+      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 cursor-pointer">
         <IoMdNotifications size={26} className="text-gray-600" />
       </div>
-      <div className="flex gap-3 relative">
+      <div className="flex gap-3 relative ">
         <div
-          className="w-12 h-12 rounded-full bg-white"
+          className="w-12 h-12 rounded-full bg-white cursor-pointer"
           onClick={() => setDropdown((prev) => !prev)}
         ></div>
-        <div className="flex flex-col relative">
-          <p className="text-medium font-semibold">{name ? name : "Loading....."}</p>
-          <p className="text-sm text-gray-600">{role ? role: "Loading...."} </p>
-        </div>
-        {dropdown && <DropdownMenu />}
+        {dropdown && <DropdownMenu user={user} role={role} />}
       </div>
     </div>
   );
 }
 
-function DropdownMenu() {
+function DropdownMenu({ user, role }: ProfileBlockProps) {
+  const menu = [
+    {
+      icon: <FaUser />,
+      title: "View Profile",
+    },
+    {
+      icon: <IoMdHelp />,
+      title: "Help & Support",
+    },
+    {
+      icon: <IoLogOutSharp />,
+      title: "Log out"
+    }
+  ];
+
   return (
-    <div className="w-full h-30 bg-white border rounded-sm shadow border-gray-200 absolute top-15"></div>
+    <div className="w-60  bg-white border rounded-sm shadow border-gray-200 absolute top-13 right-0 px-5 py-2 cursor-pointer">
+      <div className="flex mt-3 items-center gap-3">
+        <div className="shadow-sm w-11 h-11 rounded-full"></div>
+        <div>
+          <p className="font-semibold text-sm">
+            {user ? user : "Loading....."}
+          </p>
+          <p className="text-sm">
+            {role ? CapitalizeFirst(role) : "Loading....."}
+          </p>
+        </div>
+      </div>
+      <hr className="w-[98%] text-gray-300 mt-3 mb-2 " />
+      {menu.map((item) => (
+        <DropDownSelection icon={item.icon} title={item.title} onClick={() => alert(item.title)} />
+      ))}
+    </div>
+  );
+}
+
+function DropDownSelection({ icon, title, onClick }: DropDownSelectionType) {
+  return (
+    <div className="w-full h-9 rounded-xs hover:bg-gray-100 flex items-center pl-1 justify-between mt-1" onClick={onClick}>
+      <div className="w-7 h-7 rounded-full bg-gray-400 flex items-center justify-center relative">
+        {icon}
+      </div>
+      <p className="absolute left-15 font-medium text-sm">{title}</p>
+      <MdOutlineKeyboardArrowRight />
+    </div>
   );
 }
