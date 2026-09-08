@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
-
+import { NavLink } from "react-router-dom";
 import {
   MdOutlineArrowLeft,
   MdOutlineArrowRight,
@@ -24,19 +24,33 @@ type RenderType = {
 
 type menuItemType = {
   section: string;
-  contents: { name: string; icon: React.ReactNode }[];
+  contents: { name: string; icon: React.ReactNode; path: string }[];
 }[];
 
 let menuItems = [
   {
     section: "Analytics",
-    contents: [{ name: "Dashboard", icon: <AiFillDashboard size={19} /> }],
+    contents: [
+      {
+        name: "Dashboard",
+        icon: <AiFillDashboard size={19} />,
+        path: "/root/dashboard",
+      },
+    ],
   },
   {
     section: "Employees",
     contents: [
-      { name: "Manage", icon: <MdManageAccounts size={19} /> },
-      { name: "Register", icon: <IoIosSave size={19} /> },
+      {
+        name: "Manage",
+        icon: <MdManageAccounts size={19} />,
+        path: "manage_employee",
+      },
+      {
+        name: "Register",
+        icon: <IoIosSave size={19} />,
+        path: "register_employee",
+      },
     ],
   },
 ];
@@ -93,14 +107,20 @@ function RenderContent({ content, isActive }: RenderType) {
               >
                 {item.section}
               </p>
-              {item.contents.map((contents, index) => (
-                <div className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md" key={index}>
-                  <p className="text-base font-medium text-gray-700">
-                    {contents.name}
-                  </p>
-                  {contents.icon}
-                </div>
-              ))}
+              <nav>
+                {item.contents.map((contents, index) => (
+                  <NavLink
+                    className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
+                    key={index}
+                    to={contents.path}
+                  >
+                    <p className="text-base font-medium text-gray-700">
+                      {contents.name}
+                    </p>
+                    {contents.icon}
+                  </NavLink>
+                ))}
+              </nav>
             </div>
           ))}
         </>
@@ -123,25 +143,6 @@ function RenderContent({ content, isActive }: RenderType) {
               </div>
             ))}
           </div>
-          {/* {content.map((item, index) => (
-            <div className="">
-              {item.contents.map((contents, index) => (
-                <div
-                  className="flex items-center justify-between px-3 hover:font-bold py-1 
-                hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
-                  onMouseEnter={() => setHovered(contents.name)}
-                  onMouseLeave={() => setHovered(null)}
-                >
-                  {hovered == contents.name && (
-                    <div className="absolute left-15">
-                      <Tooltip type="horizontal" text={contents.name} />
-                    </div>
-                  )}
-                  {contents.icon}
-                </div>
-              ))}
-            </div>
-          ))}*/}
         </>
       )}
     </div>

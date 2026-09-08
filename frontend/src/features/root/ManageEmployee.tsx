@@ -1,7 +1,9 @@
+import ContentContainer from "../../components/ui/ContentContainer";
+
 export default function ManageEmployee(){
     return (
-        <div className="w-full h-full rounded-xl component">
-           Manage Employee
-        </div>
+        <ContentContainer>
+            <p>Manage Employee</p>
+        </ContentContainer>
     )
 }

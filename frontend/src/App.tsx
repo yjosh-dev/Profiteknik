@@ -9,6 +9,9 @@ import ContextProvider from "./context/ContextProvider.tsx";
 
 import ProtectedRoute from "./layout/ProtectedRoute.tsx";
 
+import RegisterEmployee from "./features/root/RegisterEmployee.tsx";
+import ManageEmployee from "./features/root/ManageEmployee.tsx";
+
 function App() {
   return (
     <ContextProvider>
@@ -16,7 +19,10 @@ function App() {
         <Routes>
           <Route path="/root" element={<RootHome />} />
           <Route element={<ProtectedRoute path="/root" />}>
-            <Route path="/root/dash" element={<RootDashboard />} />
+            <Route path="/root/dash" element={<RootDashboard />}>
+              <Route path="manage_employee" element={<ManageEmployee/>} />
+              <Route path="register_employee" element={<RegisterEmployee/>} />
+            </Route>
           </Route>
           <Route path="/test" element={<Test />} />
         </Routes>

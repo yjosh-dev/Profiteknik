@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, Outlet } from "react-router-dom";
+
 import Sidebar from "../../components/common/Sidebar";
 import Header from "../../components/common/Header";
-import Loading from "../../components/common/Loading";
-import { rootAuth } from "../../service/api/auth/rootAuth";
-import StatusModal from "../../components/ui/StatusModal";
-import { MdError } from "react-icons/md";
-import { useNavigate } from "react-router-dom";
-import ContentContainer from "../../components/ui/ContentContainer";
 
 export default function RootDashboard() {
   const [isActive, setIsActive] = useState(true);
@@ -29,7 +25,7 @@ export default function RootDashboard() {
           <Header />
         </header>
         <main className="w-full flex-1 ">
-          <ContentContainer />
+          <Outlet />
         </main>
       </div>
     </div>
