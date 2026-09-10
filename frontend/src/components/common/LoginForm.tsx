@@ -15,12 +15,13 @@ import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RiLockPasswordFill } from "react-icons/ri";
 
 import { rootAuth } from "../../service/api/auth/rootAuth";
-
+import { UseAuth } from "../../hooks/useAuth";
 import StatusModal from "../ui/StatusModal";
 
 import { validatePasswordInput } from "../../utils/AuthInputValidation";
 
 export default function LoginForm() {
+  const { checkAuth } = UseAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,12 +31,12 @@ export default function LoginForm() {
 
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [showPassword, setShowPassword] = useState("password");
 
   const handleContinue = () => {
-    setSuccess(false)
+    setSuccess(false);
     navigate("/root/dash");
   };
+
   const handleClick = async (email: string, password: string) => {
     try {
       setIsLoading(true);
@@ -51,6 +52,7 @@ export default function LoginForm() {
         setError(message);
       }
     } finally {
+      checkAuth()
       setIsLoading(false);
     }
   };
@@ -86,7 +88,6 @@ export default function LoginForm() {
         text="Password"
         icon={<RiLockPasswordFill size={17} />}
         className="min-w-xs"
-        type={showPassword}
         placeholder="Enter your account password"
       />
 
