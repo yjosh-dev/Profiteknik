@@ -11,7 +11,7 @@ export default function ContentContainer({
 }: ContentContainerType) {
   return (
     <div
-      className={`w-full h-full bg-[#EDE9E6] rounded-xl border-3 border-dotted border-gray-400 flex items-center justify-center ${className}`}
+      className={`w-full h-full bg-[#EDE9E6] rounded-xl border-3 border-dotted border-gray-400  ${className}`}
     > 
       {children}
     </div>
