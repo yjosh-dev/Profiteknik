@@ -110,7 +110,13 @@ function RenderContent({ content, isActive }: RenderType) {
               <nav>
                 {item.contents.map((contents, index) => (
                   <NavLink
-                    className="flex items-center justify-between px-3 hover:font-bold py-1 hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
+                    className={({ isActive }) =>
+                      `my-1 flex items-center justify-between px-3 py-1 transition rounded-md border-l-5 hover:font-bold hover:bg-gray-400 hover:border-red-700 ${
+                        isActive
+                          ? "font-bold bg-gray-400 border-red-700"
+                          : "border-transparent"
+                      }`
+                    }
                     key={index}
                     to={contents.path}
                   >
