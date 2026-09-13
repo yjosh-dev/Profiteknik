@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('middle_name')->nullable();
             $table->string('last_name');
             $table->string('email')->unique();
-            $table->enum('suffix', ["Jr", "Sr", "3rd", "None"]);
+            $table->enum('suffix', ["Jr", "Sr", "3rd", "None"])->nullable();
             $table->enum('salutations', ['Mr.', 'Ms.', 'Mrs.']);
             $table->enum('sex', ["Male", "Female"]);
             $table->string('profile_image')->default('profile.png')->nullable();
