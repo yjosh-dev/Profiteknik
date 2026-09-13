@@ -82,7 +82,7 @@ function DropdownMenu({ user, role }: ProfileBlockProps) {
   ];
 
   return (
-    <div className="w-60  bg-white border rounded-sm shadow border-gray-200 absolute top-13 right-0 px-5 py-2 cursor-pointer">
+    <div className="w-60 z-99 bg-white border rounded-sm shadow border-gray-200 absolute top-13 right-0 px-5 py-2 cursor-pointer">
       <div className="flex mt-3 items-center gap-3">
         <div className="shadow-sm w-11 h-11 rounded-full"></div>
         <div>
