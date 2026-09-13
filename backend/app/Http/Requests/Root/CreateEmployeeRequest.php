@@ -31,7 +31,7 @@ class CreateEmployeeRequest extends FormRequest
         'suffix'         => ['nullable', 'string', 'max:50'],
         'salutations'    => ['nullable', 'string', 'max:50'],
         'sex'            => ['required', 'string', 'in:Male,Female,other'],
-        'profile_image'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        'profile_image'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5048'],
 
         // Employee Account
         'username'       => ['required', 'string', 'max:255', 'unique:employee_account,username'],
