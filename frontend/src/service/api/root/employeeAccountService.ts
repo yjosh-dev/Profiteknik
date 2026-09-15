@@ -1,7 +1,7 @@
-import type { EmployeeFormData } from "../../../types/EmployeeTypes";
 import axiosClient from "../axiosClient";
 
 export const employeeAccount = {
+  
   registerEmployee: async (form: FormData) => {
     return await axiosClient.post("/root/employees", form, {
       headers: {
@@ -9,4 +9,12 @@ export const employeeAccount = {
       },
     });
   },
+   
+  getEmployees: async () => {
+    return await axiosClient.get("/root/employees")
+  },
+
+  deleteEmployee: async (id: string) => {
+     return await axiosClient.delete(`/root/employees/${id}`)
+  }
 };
