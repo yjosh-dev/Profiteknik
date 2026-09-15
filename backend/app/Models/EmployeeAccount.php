@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Models\EmployeeInformation;
 
 class EmployeeAccount extends Authenticatable
 {
@@ -29,5 +30,10 @@ class EmployeeAccount extends Authenticatable
             'password' => 'hashed',
             'last_login' => 'datetime'
         ];
+    }
+
+    public function info() 
+    {
+      return $this->hasOne(EmployeeInformation::class, 'employee_id', 'employee_id');
     }
 }

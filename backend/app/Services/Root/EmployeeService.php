@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 
 class EmployeeService
 {
+
    public function storeEmployeeAccount(array $data)
    {
       return DB::transaction(function () use($data) {
@@ -53,6 +54,17 @@ class EmployeeService
                 'account'     => DB::table('employee_account')->where('employee_id', $employeeId)->first(),
                 'information' => DB::table('employee_information')->where('employee_id', $employeeId)->first(),
             ];
+      });
+   }
+   
+   public function deleteEmployee(string $data)
+   {
+      return DB::transaction(function () use($data) {
+           $user = EmployeeAccount::where('employee_id', $data)
+                                  ->first();
+           if ($user) {
+             return $user->delete(); 
+            }
       });
    }
 }
