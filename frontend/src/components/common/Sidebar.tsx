@@ -141,7 +141,7 @@ function RenderContent({ content, isActive }: RenderType) {
                 onMouseLeave={() => setHovered(null)}
               >
                 {hovered == contents.name && (
-                  <div className="absolute left-15">
+                  <div className="absolute left-15 z-99">
                     <Tooltip type="horizontal" text={contents.name} />
                   </div>
                 )}
