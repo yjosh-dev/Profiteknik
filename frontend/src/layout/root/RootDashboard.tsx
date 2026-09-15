@@ -10,7 +10,7 @@ export default function RootDashboard() {
   return (
     <div className="min-h-screen flex bg-white">
       <aside
-        className={`h-dvh p-3 transition-[width] duration-300 ease-in-out ${
+        className={`h-[98vh] p-3 transition-[width] duration-300 ease-in-out ${
           isActive ? "w-[15%]" : "w-[6%]"
         }`}
       >
@@ -21,10 +21,10 @@ export default function RootDashboard() {
       </aside>
 
       <div className="flex-1 h-dvh flex flex-col gap-3 py-3 pr-3">
-        <header className="w-full h-[10%] ">
+        <header className="w-[98%] h-[10%] ">
           <Header />
         </header>
-        <main className="w-full flex-1 ">
+        <main className="w-[98%] h-[86%] ">
           <Outlet />
         </main>
       </div>
