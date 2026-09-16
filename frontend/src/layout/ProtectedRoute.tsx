@@ -11,7 +11,7 @@ export default function ProtectedRoute({ path }: { path: string }) {
 
   if (loading) return <Loading />;
 
-  if (unauthenticated) return <Navigate to="/root" replace />;
+  if (unauthenticated) return <Navigate to={path} replace />;
 
   return <Outlet />;
 }
