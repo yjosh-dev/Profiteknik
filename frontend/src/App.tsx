@@ -30,6 +30,8 @@ function App() {
             </Route>
           </Route>
 
+
+          {/* EMPLOYEE */}
           <Route element={<ProtectedRoute path="/employee" />}>
             <Route path="/employee/dash" element={<EmployeeDashboard />}>
               
