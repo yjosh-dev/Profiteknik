@@ -28,7 +28,8 @@ export default function EmployeeHome() {
         setError(message);
       }
     } finally {
-      checkAuth();
+      localStorage.setItem('verify_type', "employee")
+      checkAuth("employee");
       setLoading(false);
     }
   };

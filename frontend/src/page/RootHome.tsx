@@ -28,7 +28,8 @@ export default function RootHome() {
         setError(message);
       }
     } finally {
-      checkAuth();
+      localStorage.setItem('verify_type', "root")
+      checkAuth("root");
       setIsLoading(false);
     }
   };
@@ -37,6 +38,7 @@ export default function RootHome() {
     setIsLoading(false)
     navigate("/root/dash")
   }
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <LoginForm
