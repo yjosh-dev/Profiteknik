@@ -11,6 +11,8 @@ import ProtectedRoute from "./layout/ProtectedRoute.tsx";
 
 import RegisterEmployee from "./features/root/RegisterEmployee.tsx";
 import ManageEmployee from "./features/root/ManageEmployee.tsx";
+import EmployeeDashboard from "./layout/employee/EmployeeDashboard.tsx";
+import EmployeeHome from "./page/EmployeeHome.tsx";
 
 function App() {
   return (
@@ -18,12 +20,22 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/root" element={<RootHome />} />
+          <Route path="/employee" element={<EmployeeHome />} />
+
+          {/* ROOT */}
           <Route element={<ProtectedRoute path="/root" />}>
             <Route path="/root/dash" element={<RootDashboard />}>
-              <Route path="manage_employee" element={<ManageEmployee/>} />
-              <Route path="register_employee" element={<RegisterEmployee/>} />
+              <Route path="manage_employee" element={<ManageEmployee />} />
+              <Route path="register_employee" element={<RegisterEmployee />} />
             </Route>
           </Route>
+
+          <Route element={<ProtectedRoute path="/employee" />}>
+            <Route path="/employee/dash" element={<EmployeeDashboard />}>
+              
+            </Route>
+          </Route>
+
           <Route path="/test" element={<Test />} />
         </Routes>
       </BrowserRouter>
