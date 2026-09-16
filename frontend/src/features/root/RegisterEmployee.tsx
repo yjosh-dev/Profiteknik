@@ -9,7 +9,6 @@ import { FaChevronUp, FaChevronDown, FaSave, FaCheckCircle } from "react-icons/f
 import { MdDelete, MdOutlineReportGmailerrorred } from "react-icons/md";
 import { RxCross2 } from "react-icons/rx";
 
-import { handleInput } from "../../hooks/handleInput";
 import FormInput from "../../components/ui/FormInput";
 
 import { employeeAccount } from "../../service/api/root/employeeAccountService";
@@ -275,18 +274,32 @@ export default function RegisterEmployee() {
                     onChange={handleChange}
                     title="Sex"
                   />
-                </div>
+                </div>             
+              </form>
+            </div>
+            <h2 className="font-semibold text-base text-gray-600 mt-10">
+              Employee Contacts
+            </h2>
+            <div className="mt-3">
+              <form className="grid grid-cols-2 gap-5 w-full mt-3">
                 <FormInput
                   id="email"
                   value={formData.email}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md"
+                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md "
                   onChange={handleChange}
                   placeholder="Email"
+                />
+                <FormInput
+                  id="email"
+                  value={formData.email}
+                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md col-"
+                  onChange={handleChange}
+                  placeholder="Phone no."
                 />
               </form>
             </div>
           </div>
-          <div className="flex gap-3 absolute right-10 text-white ">
+          <div className="flex gap-3 absolute right-15 text-white ">
             <button
               className="w-24 h-10 rounded-sm flex items-center justify-center gap-2 bg-red-600/80 border border-red-200 hover:bg-red-400"
               onClick={() => handleClear()}
@@ -360,7 +373,7 @@ export default function RegisterEmployee() {
               heading="Registration Successful"
               description="Employee account successfully created!"
               icon={<FaCheckCircle  size={45} />}
-              button_color="bg-[#FF0000]"
+              button_color="bg-[#008000]"
               button_name="Close"
               onClick={() => setSuccess(false)}
             />
