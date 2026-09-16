@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -20,42 +20,34 @@ import StatusModal from "../ui/StatusModal";
 
 import { validatePasswordInput } from "../../utils/AuthInputValidation";
 
-export default function LoginForm() {
+type LoginFormType = {
+  isLoading: boolean;
+  success: boolean;
+  error: boolean | null | string;
+  onClick: (email: string, password: string) => void;
+  handleContinue: () => void;
+};
+
+export default function LoginForm({
+  isLoading,
+  success,
+  error,
+  onClick,
+  handleContinue,
+}: LoginFormType) {
+  // next step note
+  // lift status states
+  // prop drill the login function itself
+  // transfer the useauth
+  // transfer the handle continue
+
   const { checkAuth } = UseAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
-
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleContinue = () => {
-    setSuccess(false);
-    navigate("/root/dash");
-  };
-
-  const handleClick = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-      const result = await rootAuth.authLogin(email, password);
-      localStorage.setItem("token", result.data.data);
-      setSuccess(true);
-    } catch (error) {
-      setIsLoading(false);
-      if (axios.isAxiosError(error)) {
-        const message =
-          error.response?.data?.message ??
-          "Something went wrong. Please try again.";
-        setError(message);
-      }
-    } finally {
-      checkAuth()
-      setIsLoading(false);
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const pass = validatePasswordInput(e.target.value);
@@ -95,7 +87,7 @@ export default function LoginForm() {
 
       <Button
         disabled={isLoading}
-        onClick={() => handleClick(formData.username, formData.password)}
+        onClick={() => onClick(formData.username, formData.password)}
         className="bg-black
            py-2 px-24 min-w-xs my-2 rounded-md text-white
            transition-all duration-200 ease-in-out
@@ -128,9 +120,8 @@ export default function LoginForm() {
         <div className="w-screen h-screen flex items-center justify-center absolute z-99 bg-black/80 backdrop-blur-xs">
           <StatusModal
             icon={<MdError size={54} color="#a61124" />}
-            onClick={() => setError(null)}
             heading="Login failed"
-            description={error}
+            description={error.toString()}
             button_name="close"
             button_color="bg-[#a61124]"
           />
