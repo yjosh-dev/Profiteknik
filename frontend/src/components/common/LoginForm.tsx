@@ -26,7 +26,8 @@ type LoginFormType = {
   error: boolean | null | string;
   onClick: (email: string, password: string) => void;
   handleContinue: () => void;
-};
+  onClose: () => void;
+}; 
 
 export default function LoginForm({
   isLoading,
@@ -34,6 +35,7 @@ export default function LoginForm({
   error,
   onClick,
   handleContinue,
+  onClose
 }: LoginFormType) {
   // next step note
   // lift status states
@@ -120,6 +122,7 @@ export default function LoginForm({
         <div className="w-screen h-screen flex items-center justify-center absolute z-99 bg-black/80 backdrop-blur-xs">
           <StatusModal
             icon={<MdError size={54} color="#a61124" />}
+            onClick={onClose}
             heading="Login failed"
             description={error.toString()}
             button_name="close"
