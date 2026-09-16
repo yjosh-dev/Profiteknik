@@ -12,11 +12,15 @@ import { CapitalizeFirst } from "../../utils/CapitalizeFirstLetter";
 
 export default function Header() {
   const { userData } = UseAuth();
+  
+  useEffect(() => {
+    console.log(data)
+  },[])
   const data = userData?.userData;
   return (
     <div className="w-full h-full bg-[#EDE9E6] rounded-xl component flex items-center justify-between px-6 pr-10 select-none">
       <SearchBar />
-      <ProfileBlock user={data?.name} role={data?.role} />
+      <ProfileBlock user={data?.name} role={data?.role} profile_image={data?.profile_image} />
     </div>
   );
 }
@@ -36,6 +40,7 @@ function SearchBar({ item }: { item?: string }) {
 type ProfileBlockProps = {
   user?: string;
   role?: string;
+  profile_image?: string;
 };
 
 type DropDownSelectionType = {
@@ -44,7 +49,7 @@ type DropDownSelectionType = {
   onClick?: () => void;
 };
 
-function ProfileBlock({ user, role }: ProfileBlockProps) {
+function ProfileBlock({ user, role, profile_image }: ProfileBlockProps) {
   const [dropdown, setDropdown] = useState(false);
   return (
     <div className="w-[30%] h-12 flex items-center justify-end gap-4">
@@ -56,16 +61,18 @@ function ProfileBlock({ user, role }: ProfileBlockProps) {
       </div>
       <div className="flex gap-3 relative ">
         <div
-          className="w-12 h-12 rounded-full bg-white cursor-pointer"
+          className="w-12 h-12 rounded-full bg-white "
           onClick={() => setDropdown((prev) => !prev)}
-        ></div>
-        {dropdown && <DropdownMenu user={user} role={role} />}
+        >
+          {profile_image ? <img src={`http://localhost:8000/storage/${profile_image}`} className="w-full h-full rounded-full"/> : ""}
+        </div>
+        {dropdown && <DropdownMenu user={user} role={role} profile_image={profile_image} />}
       </div>
     </div>
   );
 }
 
-function DropdownMenu({ user, role }: ProfileBlockProps) {
+function DropdownMenu({ user, role, profile_image }: ProfileBlockProps) {
   const menu = [
     {
       icon: <FaUser />,
@@ -84,7 +91,9 @@ function DropdownMenu({ user, role }: ProfileBlockProps) {
   return (
     <div className="w-60 z-99 bg-white border rounded-sm shadow border-gray-200 absolute top-13 right-0 px-5 py-2 cursor-pointer">
       <div className="flex mt-3 items-center gap-3">
-        <div className="shadow-sm w-11 h-11 rounded-full"></div>
+        <div className="shadow-sm w-11 h-11 rounded-full bg-white">
+          <img src={`http://localhost:8000/storage/${profile_image}`} className="w-11 h-11 rounded-full"/>
+        </div>
         <div>
           <p className="font-semibold text-sm">
             {user ? user : "Loading....."}
