@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Exception;
+use Illuminate\Http\Request;
 use App\Models\EmployeeAccount;
 use Illuminate\Support\Facades\Hash;
 
@@ -36,5 +37,20 @@ class EmployeeAuthService {
      public function issueToken($user)
     {
         return $user->createToken('auth_token', ['*'])->plainTextToken;
+    }
+
+    public function verify(Request $request)
+    {
+        $user = $request->user();
+        $info = $user->info;
+        $data = [
+          "id" => $info->employee_id,
+          "first_name" => $info->first_name,
+          "middle_name" => $info->middle_name,
+          "last_name" => $info->last_name,
+          "profile_image" => $info->profile_image,
+          "role" => "employee"
+       ];
+        return $data;
     }
 }

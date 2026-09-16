@@ -31,6 +31,10 @@ class EmployeeAuthController extends Controller
              'message' => $e->getMessage(),
           ], 401);
       }
+    }
 
+    public function verifyMe(Request $request){
+        $verify = $this->EmployeeAuthService->verify($request);
+        return $verify;
     }
 }
