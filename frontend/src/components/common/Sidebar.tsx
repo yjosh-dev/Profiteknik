@@ -12,6 +12,8 @@ import { IoIosSave } from "react-icons/io";
 import { AiFillDashboard } from "react-icons/ai";
 import Tooltip from "../ui/Tooltip";
 
+import { UseAuth } from "../../hooks/useAuth";
+
 type SidebarType = {
   handleMinimize: () => void;
   isActive: boolean;
@@ -27,7 +29,7 @@ type menuItemType = {
   contents: { name: string; icon: React.ReactNode; path: string }[];
 }[];
 
-let menuItems = [
+let menuItemsRoot = [
   {
     section: "Analytics",
     contents: [
@@ -55,7 +57,55 @@ let menuItems = [
   },
 ];
 
+let menuItemsEmployee = [
+  {
+    section: "Analytics",
+    contents: [
+      {
+        name: "Dashboard",
+        icon: <AiFillDashboard size={19} />,
+        path: "/root/dashboard",
+      },
+    ],
+  },
+  {
+    section: "Job Listing",
+    contents: [
+      {
+        name: "Post listing",
+        icon: <MdManageAccounts size={19} />,
+        path: "manage_employee",
+      },
+      {
+        name: "Manage listing",
+        icon: <IoIosSave size={19} />,
+        path: "register_employee",
+      },
+    ],
+  },
+];
+
 export default function Sidebar({ handleMinimize, isActive }: SidebarType) {
+  const { userData } = UseAuth();
+  const data = userData?.userData;
+
+  if (!data) {
+    return;
+  }
+
+  const filter = (role: string) => {
+    switch (role) {
+      case "root":
+        return menuItemsRoot;
+      case "employee":
+        return menuItemsEmployee;
+      default:
+        return [];
+    }
+  };
+
+  const activeMenuItems = filter(data.role);
+
   return (
     <div className="w-full h-full flex items-center">
       {/* navbar content */}
@@ -73,7 +123,7 @@ export default function Sidebar({ handleMinimize, isActive }: SidebarType) {
         </div>
         {/* end of image and text container */}
         <hr className="text-gray-400" />
-        <RenderContent content={menuItems} isActive={isActive} />
+        <RenderContent content={activeMenuItems} isActive={isActive} />
       </div>
       {/* minimize button */}
       <div
