@@ -46,6 +46,7 @@ export default function ManageEmployee() {
       try {
          setLoading(true)
          const deleteEmployee = await employeeAccount.deleteEmployee(id);
+         setEmployeeData(prev => prev.filter(emp => emp.id !== id))
          setLoading(false)
       }catch(error){
 
@@ -218,7 +219,7 @@ function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: s
   };
 
   return (
-    <div className="flex items-center w-full px-4 py-3 gap-2 border-b border-gray-100 hover:bg-gray-50">
+    <div className="bg-gray-100 rounded-sm flex items-center w-full px-4 py-3 gap-2 border-b border-gray-100 hover:bg-gray-50 mt-2">
       <div className="w-30 flex items-center">
         <img
           src={"http://localhost:8000/storage" +"/" + employee.profileUrl}
@@ -245,7 +246,7 @@ function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: s
         </span>
       </div>
 
-      <div className="w-30 flex items-center gap-2">
+      <div className="w-30 flex items-center gap-10">
         <button className="text-xs text-blue-600 hover:underline" onClick={() => alert(employee.id)}>Edit</button>
         <button className="text-xs text-red-600 hover:underline" onClick={() => onDelete(employee.id)}>Delete</button>
       </div>
