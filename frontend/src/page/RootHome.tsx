@@ -40,6 +40,7 @@ export default function RootHome() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <LoginForm
+        onClose={() => setError(null)}
         success={success}
         handleContinue={handleContinue}
         error={error}
