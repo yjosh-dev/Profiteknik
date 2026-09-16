@@ -30,7 +30,6 @@ class RootAuthController extends Controller
              'success' => false,
              'message' => $e->getMessage(),
           ], 401);
-
        }
     }
 

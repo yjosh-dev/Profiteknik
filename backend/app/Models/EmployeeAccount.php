@@ -23,7 +23,7 @@ class EmployeeAccount extends Authenticatable
         "last_login"
     ];
 
-    protected $hidden="password";
+    protected $hidden=["password"];
 
     protected function casts(): array {
         return [

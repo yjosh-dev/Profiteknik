@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RootAuthController;
 use App\Http\Controllers\RootAccountController;
 use App\Http\Controllers\Root\EmployeeAccountController;
+use App\Http\Controllers\EmployeeAuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -23,6 +24,13 @@ Route::prefix('/root')->group(function () {
     //employee account related
      Route::apiResource('employees', EmployeeAccountController::class);
 });
+
+Route::prefix('/employee')->group(function () {
+     Route::prefix("/auth")->controller(EmployeeAuthController::class)->group(function () {
+        Route::post('/login', 'authLogin' );
+     });
+});
+
 Route::apiResource('root', RootAccountController::class);
 
 
