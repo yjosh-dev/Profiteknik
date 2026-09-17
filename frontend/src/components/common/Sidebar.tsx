@@ -2,17 +2,22 @@ import { useState } from "react";
 
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
 import { NavLink } from "react-router-dom";
+import { UseAuth } from "../../hooks/useAuth";
+
 import {
   MdOutlineArrowLeft,
   MdOutlineArrowRight,
   MdManageAccounts,
+  MdWorkHistory,
+  MdWork
 } from "react-icons/md";
 import { SiSimpleanalytics } from "react-icons/si";
 import { IoIosSave } from "react-icons/io";
 import { AiFillDashboard } from "react-icons/ai";
+
+
 import Tooltip from "../ui/Tooltip";
 
-import { UseAuth } from "../../hooks/useAuth";
 
 type SidebarType = {
   handleMinimize: () => void;
@@ -73,12 +78,12 @@ let menuItemsEmployee = [
     contents: [
       {
         name: "Post listing",
-        icon: <MdManageAccounts size={19} />,
+        icon: <MdWork size={19} />,
         path: "manage_employee",
       },
       {
         name: "Manage listing",
-        icon: <IoIosSave size={19} />,
+        icon: <MdWorkHistory size={19} />,
         path: "register_employee",
       },
     ],
