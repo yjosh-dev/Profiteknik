@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -7,4 +9,12 @@
 .component {
     background-color: #EDE9E6;
     border-radius: 12px;
+}
+
+.archivo {
+  font-family: "Archivo", sans-serif;
+}
+
+.public-sans {
+    font-family: "Public Sans", sans-serif;
 }
