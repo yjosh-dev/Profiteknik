@@ -3,32 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\JobListing;
 
 class JobRequirements extends Model
 {
-    /**
-     * The primary key associated with the table.
-     */
-    protected $primaryKey = 'question_id';
+   protected $table = 'job_requirements';
 
-    /**
-     * No timestamps columns defined in the DBML — disable.
-     */
+    // Primary key configuration
+    protected $primaryKey = 'job_id';
+    public $incrementing = false;
     public $timestamps = false;
 
-    /**
-     * The attributes that are mass assignable.
-     */
+    // Mass-assignable attributes matching your schema
     protected $fillable = [
         'job_id',
-        'screening_question',
+        'highest_education',
+        'experience',
     ];
 
     /**
-     * The job listing this screening question belongs to.
+     * Relationship to the JobListing model.
      */
-    public function jobListing(): BelongsTo
+
+    function joblisting(): BelongsTo
     {
-        return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
+         return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
     }
 }
