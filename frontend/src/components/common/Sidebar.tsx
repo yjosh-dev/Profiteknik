@@ -79,12 +79,12 @@ let menuItemsEmployee = [
       {
         name: "Post listing",
         icon: <MdWork size={19} />,
-        path: "manage_employee",
+        path: "job_listing",
       },
       {
         name: "Manage listing",
         icon: <MdWorkHistory size={19} />,
-        path: "register_employee",
+        path: "manage_job_listing",
       },
     ],
   },
