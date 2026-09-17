@@ -13,6 +13,7 @@ import RegisterEmployee from "./features/root/RegisterEmployee.tsx";
 import ManageEmployee from "./features/root/ManageEmployee.tsx";
 import EmployeeDashboard from "./layout/employee/EmployeeDashboard.tsx";
 import EmployeeHome from "./page/EmployeeHome.tsx";
+import JobListing from "./features/employee/JobListing.tsx";
 
 function App() {
   return (
@@ -34,7 +35,7 @@ function App() {
           {/* EMPLOYEE */}
           <Route element={<ProtectedRoute path="/employee" />}>
             <Route path="/employee/dash" element={<EmployeeDashboard />}>
-              
+               <Route path="job_listing" element={<JobListing />} />
             </Route>
           </Route>
 
