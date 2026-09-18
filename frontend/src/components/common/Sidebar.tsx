@@ -1,46 +1,41 @@
 import { useState } from "react";
-
-import logo from "../../assets/logo/profiteknik_logo_only.svg";
 import { NavLink } from "react-router-dom";
+import logo from "../../assets/logo/profiteknik_logo_only.svg";
 import { UseAuth } from "../../hooks/useAuth";
 
 import {
-  MdOutlineArrowLeft,
-  MdOutlineArrowRight,
+  MdOutlineChevronLeft,
+  MdOutlineChevronRight,
   MdManageAccounts,
   MdWorkHistory,
-  MdWork
+  MdWork,
 } from "react-icons/md";
-import { SiSimpleanalytics } from "react-icons/si";
-import { IoIosSave } from "react-icons/io";
 import { AiFillDashboard } from "react-icons/ai";
+import { IoIosSave } from "react-icons/io";
 
-
-import Tooltip from "../ui/Tooltip";
-
-
-type SidebarType = {
+type SidebarProps = {
   handleMinimize: () => void;
   isActive: boolean;
 };
 
-type RenderType = {
-  content: menuItemType;
-  isActive: boolean;
+type MenuItem = {
+  name: string;
+  icon: React.ReactNode;
+  path: string;
 };
 
-type menuItemType = {
+type MenuSection = {
   section: string;
-  contents: { name: string; icon: React.ReactNode; path: string }[];
-}[];
+  contents: MenuItem[];
+};
 
-let menuItemsRoot = [
+const menuItemsRoot: MenuSection[] = [
   {
     section: "Analytics",
     contents: [
       {
         name: "Dashboard",
-        icon: <AiFillDashboard size={19} />,
+        icon: <AiFillDashboard size={18} />,
         path: "/root/dashboard",
       },
     ],
@@ -50,26 +45,26 @@ let menuItemsRoot = [
     contents: [
       {
         name: "Manage",
-        icon: <MdManageAccounts size={19} />,
+        icon: <MdManageAccounts size={18} />,
         path: "manage_employee",
       },
       {
         name: "Register",
-        icon: <IoIosSave size={19} />,
+        icon: <IoIosSave size={18} />,
         path: "register_employee",
       },
     ],
   },
 ];
 
-let menuItemsEmployee = [
+const menuItemsEmployee: MenuSection[] = [
   {
     section: "Analytics",
     contents: [
       {
         name: "Dashboard",
-        icon: <AiFillDashboard size={19} />,
-        path: "/root/dashboard",
+        icon: <AiFillDashboard size={18} />,
+        path: "dashboard",
       },
     ],
   },
@@ -78,27 +73,25 @@ let menuItemsEmployee = [
     contents: [
       {
         name: "Post listing",
-        icon: <MdWork size={19} />,
-        path: "job_listing",
+        icon: <MdWork size={18} />,
+        path: "create_job_listing",
       },
       {
         name: "Manage listing",
-        icon: <MdWorkHistory size={19} />,
+        icon: <MdWorkHistory size={18} />,
         path: "manage_job_listing",
       },
     ],
   },
 ];
 
-export default function Sidebar({ handleMinimize, isActive }: SidebarType) {
+export default function Sidebar({ handleMinimize, isActive }: SidebarProps) {
   const { userData } = UseAuth();
   const data = userData?.userData;
 
-  if (!data) {
-    return;
-  }
+  if (!data) return null;
 
-  const filter = (role: string) => {
+  const getMenuByRole = (role: string): MenuSection[] => {
     switch (role) {
       case "root":
         return menuItemsRoot;
@@ -109,117 +102,120 @@ export default function Sidebar({ handleMinimize, isActive }: SidebarType) {
     }
   };
 
-  const activeMenuItems = filter(data.role);
+  const activeMenuItems = getMenuByRole(data.role);
 
   return (
-    <div className="w-full h-full flex items-center">
-      {/* navbar content */}
+    <aside className="relative h-full flex items-center select-none">
+      {/* Sidebar Panel */}
       <div
-        className={`w-full h-full flex flex-col rounded-xl component p-3 gap-3`}
+        className={`h-full flex flex-col justify-between border-r border-[#E3E0D8] bg-[#FAF9F6] p-4 transition-all duration-300 ease-in-out ${
+          isActive ? "w-64" : "w-20"
+        }`}
       >
-        {/* image and text container */}
-        <div className="flex flex-col items-center justify-center gap-2">
-          <img src={logo} className="w-13 h-13 " />
-          {isActive && (
-            <p className="font-bold text-sm tracking-widest uppercase text-gray-800">
-              Profiteknik Corp
-            </p>
-          )}
-        </div>
-        {/* end of image and text container */}
-        <hr className="text-gray-400" />
-        <RenderContent content={activeMenuItems} isActive={isActive} />
-      </div>
-      {/* minimize button */}
-      <div
-        className="rounded-full w-8 h-8 shadow-md border border-gray-200 component -ml-3 flex items-center justify-center -mr-2"
-        onClick={handleMinimize}
-      >
-        {isActive ? (
-          <MdOutlineArrowLeft size={70} />
-        ) : (
-          <MdOutlineArrowRight size={70} />
-        )}
-      </div>
-    </div>
-  );
-}
-import { useEffect } from "react";
-
-function RenderContent({ content, isActive }: RenderType) {
-  // this function is for inactive menu where every content[i].content is separated
-  const sortedMenu = sortNestedContents(content);
-  const [hovered, setHovered] = useState<string | null>(null);
-  return (
-    <div className="flex flex-col gap-4 pt-3">
-      {isActive ? (
-        <>
-          {content.map((item, index) => (
-            <div className="flex flex-col" key={index}>
-              <p
-                className="font-bold text-base tracking-wider  text-gray-800 mb-2"
-                key={index}
-              >
-                {item.section}
-              </p>
-              <nav>
-                {item.contents.map((contents, index) => (
-                  <NavLink
-                    className={({ isActive }) =>
-                      `my-1 flex items-center justify-between px-3 py-1 transition rounded-md border-l-5 hover:font-bold hover:bg-gray-400 hover:border-red-700 ${
-                        isActive
-                          ? "font-bold bg-gray-400 border-red-700"
-                          : "border-transparent"
-                      }`
-                    }
-                    key={index}
-                    to={contents.path}
-                  >
-                    <p className="text-base font-medium text-gray-700">
-                      {contents.name}
-                    </p>
-                    {contents.icon}
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-          ))}
-        </>
-      ) : (
-        <>
-          <div className="flex flex-col gap-3">
-            {sortedMenu.map((contents) => (
-              <div
-                className="flex items-center justify-between px-3 hover:font-bold py-1  
-                hover:bg-gray-400 hover:border-l-5 hover:border-red-700 transition rounded-md"
-                onMouseEnter={() => setHovered(contents.name)}
-                onMouseLeave={() => setHovered(null)}
-              >
-                {hovered == contents.name && (
-                  <div className="absolute left-15 z-99">
-                    <Tooltip type="horizontal" text={contents.name} />
-                  </div>
-                )}
-                {contents.icon}
+        <div className="flex flex-col gap-6">
+          {/* Logo & Branding */}
+          <div className="flex items-center gap-3 px-2 py-1">
+            <img src={logo} alt="Profiteknik" className="w-9 h-9 object-contain" />
+            {isActive && (
+              <div className="flex flex-col overflow-hidden whitespace-nowrap">
+                <span className="font-serif text-base text-[#1C2321] tracking-wide font-medium leading-none">
+                  Profiteknik
+                </span>
+                <span className="archivo text-[10px] uppercase tracking-widest text-[#6B6F76] mt-1">
+                  Corporation
+                </span>
               </div>
-            ))}
+            )}
           </div>
-        </>
-      )}
-    </div>
+
+          <div className="h-[1px] bg-[#E3E0D8] w-full" />
+
+          {/* Navigation Links */}
+          <RenderContent content={activeMenuItems} isActive={isActive} />
+        </div>
+      </div>
+
+      {/* Collapse/Expand Toggle Button */}
+      <button
+        type="button"
+        onClick={handleMinimize}
+        aria-label={isActive ? "Collapse sidebar" : "Expand sidebar"}
+        className="absolute -right-3.5 top-8 z-20 flex items-center justify-center w-7 h-7 rounded-full bg-[#FAF9F6] border border-[#E3E0D8] text-[#1C2321] shadow-sm hover:bg-[#F1EFE9] transition-colors"
+      >
+        {isActive ? <MdOutlineChevronLeft size={18} /> : <MdOutlineChevronRight size={18} />}
+      </button>
+    </aside>
   );
 }
 
-const sortNestedContents = (content: menuItemType) => {
-  let sortedContents = [];
-
-  for (let i = 0; i < content.length; i++) {
-    for (let j = 0; j < content[i].contents.length; j++) {
-      sortedContents.push({
-        name: content[i].contents[j].name,
-        icon: content[i].contents[j].icon,
-      });
-    }
-  }
-  return sortedContents;
+type RenderProps = {
+  content: MenuSection[];
+  isActive: boolean;
 };
+
+function RenderContent({ content, isActive }: RenderProps) {
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {content.map((group, groupIdx) => (
+        <div key={groupIdx} className="flex flex-col gap-1.5">
+          {/* Section Heading */}
+          {isActive ? (
+            <p className="archivo text-[11px] font-semibold tracking-wider text-[#6B6F76] uppercase px-2 mb-1">
+              {group.section}
+            </p>
+          ) : (
+            <div className="h-2" />
+          )}
+
+          {/* Navigation Items */}
+          <nav className="flex flex-col gap-1">
+            {group.contents.map((item, itemIdx) => (
+              <NavLink
+                key={itemIdx}
+                to={item.path}
+                onMouseEnter={() => setHoveredItem(item.name)}
+                onMouseLeave={() => setHoveredItem(null)}
+                className={({ isActive: isLinkActive }) =>
+                  `relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group ${
+                    isActive ? "justify-start gap-3" : "justify-center"
+                  } ${
+                    isLinkActive
+                      ? "bg-[#F1EFE9] text-[#1C2321]"
+                      : "text-[#6B6F76] hover:bg-[#F8F7F2] hover:text-[#1C2321]"
+                  }`
+                }
+              >
+                {({ isActive: isLinkActive }) => (
+                  <>
+                    <span
+                      className={`transition-colors ${
+                        isLinkActive ? "text-[#1C2321]" : "text-[#6B6F76] group-hover:text-[#1C2321]"
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+
+                    {isActive && (
+                      <span className="archivo text-sm leading-none whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    )}
+
+                    {/* Collapsed Hover Tooltip */}
+                    {!isActive && hoveredItem === item.name && (
+                      <div className="absolute left-full ml-3 z-30 px-3 py-1.5 bg-[#1C2321] text-[#FAF9F6] text-xs archivo font-normal rounded shadow-md whitespace-nowrap pointer-events-none">
+                        {item.name}
+                      </div>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+      ))}
+    </div>
+  );
+}
