@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 use App\Models\JobListing;
 
 class JobRequirements extends Model
@@ -28,6 +29,6 @@ class JobRequirements extends Model
 
     function joblisting(): BelongsTo
     {
-         return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
+        return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
     }
 }
