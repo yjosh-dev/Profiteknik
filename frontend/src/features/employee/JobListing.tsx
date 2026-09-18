@@ -31,6 +31,7 @@ interface FormDataState {
 }
 
 export default function JobListing() {
+  // note use context later for listed by
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setErrorModal] = useState<boolean | null>(null);
@@ -43,7 +44,7 @@ export default function JobListing() {
     employment_type: "",
     posted_at: "",
     posted_until: "",
-    listed_by: 9,
+    listed_by: 10,
     requirements: {
       highest_education: "",
       experience: 0,
@@ -98,13 +99,13 @@ export default function JobListing() {
     }));
   };
 
-  const token = localStorage.getItem('token');
-  
+  const token = localStorage.getItem("token");
+
   const handleSubmit = async () => {
     setLoading(true);
-   
-    if(!token){
-        return;
+
+    if (!token) {
+      return;
     }
 
     try {
@@ -217,44 +218,50 @@ function JobDetails({
   useEffect(() => {
     console.log(currentDate);
   }, []);
+
+  const inputClass =
+    "w-full border border-[#D8D5CD] bg-white rounded p-2.5 text-sm text-[#1C2321] focus:outline-none focus:ring-1 focus:ring-[#991B1B] focus:border-[#991B1B]";
+  const labelClass = "archivo block text-sm text-[#1C2321] mb-1.5";
+
   return (
-    <div className="w-full h-full py-5 px-5">
+    <div className="w-full h-full py-5 px-5 bg-white">
       <Header current_step={1} steps={4} />
       <div className="w-full h-[90%] flex gap-2">
         <div className="w-[25%] h-full mt-5">
           <JobFormStepper currentStep={1} />
         </div>
-        <div className="w-[75%] h-[90%] mt-5 border border-gray-300 shadow rounded-md relative flex flex-col justify-between">
-          <div className="p-6 overflow-y-auto max-h-[calc(100%-4rem)]">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">
-              Job Details
+
+        <div className="w-[75%] h-[90%] mt-5 bg-[#FAF9F6] border border-[#E3E0D8] rounded-md relative flex flex-col justify-between overflow-hidden">
+          <div className="p-8 md:p-10 overflow-y-auto max-h-[calc(100%-4.5rem)]">
+            <span className="archivo text-xs text-[#6B6F76]">
+              Step 1 of 4 — Details
+            </span>
+            <h2 className="font-serif text-3xl text-[#1C2321] mt-2 mb-8 leading-tight">
+              Job details
             </h2>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">
-                  Job Title
-                </label>
+                <label className={labelClass}>Job title</label>
                 <input
                   type="text"
                   name="job_title"
                   value={formData.job_title}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="e.g. Welder"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Employment Type
-                </label>
+                <label className={labelClass}>Employment type</label>
                 <select
                   name="employment_type"
                   value={formData.employment_type}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                 >
-                  <option value="">Select Type</option>
+                  <option value="">Select type</option>
                   <option value="Full-time">Full-time</option>
                   <option value="Part-time">Part-time</option>
                   <option value="Contract">Contract</option>
@@ -263,89 +270,79 @@ function JobDetails({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Vacant Positions
-                </label>
+                <label className={labelClass}>Vacant positions</label>
                 <input
                   type="number"
                   name="vacant_position"
                   value={formData.vacant_position}
                   onChange={handleChange}
                   min="1"
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Minimum Salary
-                </label>
+                <label className={labelClass}>Minimum salary</label>
                 <input
                   type="number"
                   name="minimum_salary"
                   value={formData.minimum_salary}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="e.g. ₱30000"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Maximum Salary
-                </label>
+                <label className={labelClass}>Maximum salary</label>
                 <input
                   type="number"
                   name="maximum_salary"
                   value={formData.maximum_salary}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="e.g. ₱50000"
                 />
               </div>
 
               <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">
-                  Posted Until
-                </label>
+                <label className={labelClass}>Posted until</label>
                 <input
                   type="date"
                   min={currentDate.toString()}
                   name="posted_until"
                   value={formData.posted_until}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                 />
               </div>
 
               <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">
-                  Job Description
-                </label>
+                <label className={labelClass}>Job description</label>
                 <textarea
                   name="job_description"
                   value={formData.job_description}
                   onChange={handleChange}
                   rows={4}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="Provide role requirements and responsibilities..."
                 />
               </div>
             </div>
           </div>
 
-          <div className="w-[95%] h-12 absolute bottom-3 mx-5 flex items-center justify-end gap-5">
+          <div className="border-t border-[#E3E0D8] px-8 md:px-10 py-4 flex items-center justify-end gap-3 bg-[#FAF9F6]">
             <button
-              className="w-25 h-9 bg-gray-700/80 rounded-md hover:bg-gray-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-[#1C2321] border border-[#D8D5CD] rounded-md hover:bg-[#F1EFE9] transition-colors"
               onClick={handleBack}
             >
-              <p className="font-medium text-white archivo">Back</p>
+              Back
             </button>
             <button
-              className="w-25 h-9 bg-green-700/80 rounded-md hover:bg-green-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-white bg-[#991B1B] rounded-md hover:bg-[#7F1D1D] transition-colors"
               onClick={handleNext}
             >
-              <p className="font-medium text-white archivo">Next</p>
+              Next
             </button>
           </div>
         </div>
@@ -367,29 +364,34 @@ function JobRequirements({
   handleBack: () => void;
 }) {
   return (
-    <div className="w-full h-full py-5 px-5">
+    <div className="w-full h-full py-5 px-5 bg-white">
       <Header current_step={2} steps={4} />
       <div className="w-full h-[90%] flex gap-2">
         <div className="w-[25%] h-full mt-5">
           <JobFormStepper currentStep={2} />
         </div>
-        <div className="w-[75%] h-[90%] mt-5 border border-gray-300 shadow rounded-md relative flex flex-col justify-between">
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">
-              Job Requirements
+
+        <div className="w-[75%] h-[90%] mt-5 bg-white border border-[#E3E0D8] rounded-md relative flex flex-col justify-between overflow-hidden">
+          <div className="p-8 md:p-10">
+            <span className="archivo text-xs text-[#6B6F76]">
+              Step 2 of 4 — Requirements
+            </span>
+            <h2 className="font-serif text-3xl text-[#1C2321] mt-2 mb-8 leading-tight">
+              Job requirements
             </h2>
-            <div className="grid grid-cols-1 gap-4">
+
+            <div className="grid grid-cols-1 gap-6 max-w-md">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Highest Education Attained
+                <label className="archivo block text-sm text-[#1C2321] mb-1.5">
+                  Highest education attained
                 </label>
                 <select
                   name="highest_education"
                   value={formData.requirements.highest_education}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full border border-[#D8D5CD] bg-white rounded p-2.5 text-sm text-[#1C2321] focus:outline-none focus:ring-1 focus:ring-red-800 focus:border-red-800"
                 >
-                  <option value="">Select Education Level</option>
+                  <option value="">Select education level</option>
                   <option value="High School">High School</option>
                   <option value="Vocational">Vocational</option>
                   <option value="Associate">Associate</option>
@@ -400,8 +402,8 @@ function JobRequirements({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Years of Experience Required
+                <label className="archivo block text-sm text-[#1C2321] mb-1.5">
+                  Years of experience required
                 </label>
                 <input
                   type="number"
@@ -409,25 +411,25 @@ function JobRequirements({
                   value={formData.requirements.experience}
                   onChange={handleChange}
                   min="0"
-                  className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full border border-[#D8D5CD] bg-white rounded p-2.5 text-sm text-[#1C2321] focus:outline-none focus:ring-1 focus:ring-red-800 focus:border-red-800"
                   placeholder="e.g. 2"
                 />
               </div>
             </div>
           </div>
 
-          <div className="w-[95%] h-12 absolute bottom-3 mx-5 flex items-center justify-end gap-5">
+          <div className="border-t border-[#E3E0D8] px-8 md:px-10 py-4 flex items-center justify-end gap-3 bg-[#FAF9F6]">
             <button
-              className="w-25 h-9 bg-gray-700/80 rounded-md hover:bg-gray-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-[#1C2321] border border-[#D8D5CD] rounded-md hover:bg-[#F1EFE9] transition-colors"
               onClick={handleBack}
             >
-              <p className="font-medium text-white archivo">Back</p>
+              Back
             </button>
             <button
-              className="w-25 h-9 bg-green-700/80 rounded-md hover:bg-green-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-white bg-red-800 rounded-md hover:bg-red-800/80 transition-colors"
               onClick={handleNext}
             >
-              <p className="font-medium text-white archivo">Next</p>
+              Next
             </button>
           </div>
         </div>
@@ -459,27 +461,39 @@ function JobScreeningQuestions({
         <div className="w-[25%] h-full mt-5">
           <JobFormStepper currentStep={3} />
         </div>
-        <div className="w-[75%] h-[90%] mt-5 border border-gray-300 shadow rounded-md relative flex flex-col justify-between">
-          <div className="p-6 overflow-y-auto max-h-[calc(100%-4rem)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Screening Questions
-              </h2>
+
+        <div className="w-[75%] h-[90%] mt-5 bg-[#FAF9F6] border border-[#E3E0D8] rounded-md relative flex flex-col justify-between overflow-hidden">
+          <div className="p-8 md:p-10 overflow-y-auto max-h-[calc(100%-4.5rem)]">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <span className="archivo text-xs text-[#6B6F76]">
+                  Step 3 of 4 — Screening
+                </span>
+                <h2 className="font-serif text-3xl text-[#1C2321] mt-2 leading-tight">
+                  Screening questions
+                </h2>
+              </div>
               <button
                 type="button"
                 onClick={handleAddQuestion}
-                className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
+                className="archivo flex items-center gap-2 h-9 px-4 text-sm font-medium text-red-800 border border-red-700/30 bg-red-600/20 rounded-md hover:bg-red-600/10 transition-colors shrink-0 mt-1"
               >
                 <FaPlus className="w-3 h-3" />
-                Add Question
+                Add question
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {formData.screening_questions.map((q, index) => (
-                <div key={index} className="flex gap-2 items-center">
+                <div
+                  key={index}
+                  className="flex gap-3 items-start border border-[#E3E0D8] rounded-md p-3 bg-white"
+                >
+                  <div className="flex items-center justify-center w-7 h-7 mt-6 rounded-full bg-[#F1EFE9] text-[#1C2321] text-xs archivo shrink-0">
+                    {index + 1}
+                  </div>
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="archivo block text-xs text-[#6B6F76] mb-1">
                       Question {index + 1}
                     </label>
                     <input
@@ -489,17 +503,17 @@ function JobScreeningQuestions({
                         handleQuestionChange(index, e.target.value)
                       }
                       placeholder="e.g. How many years of experience do you have with Welding?"
-                      className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                      className="w-full border border-[#D8D5CD] rounded p-2 text-sm text-[#1C2321] focus:outline-none focus:ring-1 focus:ring-[#0E6B58] focus:border-[#0E6B58]"
                     />
                   </div>
                   {formData.screening_questions.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveQuestion(index)}
-                      className="mt-5 p-2 text-red-500 hover:text-red-700 transition-colors"
+                      className="mt-6 p-1.5 text-[#9A5B52] hover:text-[#7A4640] transition-colors"
                       title="Remove question"
                     >
-                      <FaTrash className="w-4 h-4" />
+                      <FaTrash className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -507,18 +521,18 @@ function JobScreeningQuestions({
             </div>
           </div>
 
-          <div className="w-[95%] h-12 absolute bottom-3 mx-5 flex items-center justify-end gap-5">
+          <div className="border-t border-[#E3E0D8] px-8 md:px-10 py-4 flex items-center justify-end gap-3 bg-[#FAF9F6]">
             <button
-              className="w-25 h-9 bg-gray-700/80 rounded-md hover:bg-gray-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-[#1C2321] border border-[#D8D5CD] rounded-md hover:bg-[#F1EFE9] transition-colors"
               onClick={handleBack}
             >
-              <p className="font-medium text-white archivo">Back</p>
+              Back
             </button>
             <button
-              className="w-25 h-9 bg-green-700/80 rounded-md hover:bg-green-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-white bg-red-800 rounded-md hover:bg-red-500/80 transition-colors"
               onClick={handleNext}
             >
-              <p className="font-medium text-white archivo">Next</p>
+              Next
             </button>
           </div>
         </div>
@@ -537,6 +551,25 @@ function JobReview({
   handleBack: () => void;
   handleSubmit: () => void;
 }) {
+  const fields = [
+    {
+      label: "Compensation",
+      value: `${formData.minimum_salary} - ${formData.maximum_salary}`,
+    },
+    {
+      label: "Education required",
+      value: formData.requirements.highest_education || "N/A",
+    },
+    {
+      label: "Experience",
+      value: `${formData.requirements.experience} years`,
+    },
+    {
+      label: "Screening questions",
+      value: formData.screening_questions.length,
+    },
+  ];
+
   return (
     <div className="w-full h-full py-5 px-5">
       <Header current_step={4} steps={4} />
@@ -544,49 +577,50 @@ function JobReview({
         <div className="w-[25%] h-full mt-5">
           <JobFormStepper currentStep={4} />
         </div>
-        <div className="w-[75%] h-[90%] mt-5 border border-gray-300 shadow rounded-md relative flex flex-col justify-between">
-          <div className="p-6 overflow-y-auto max-h-[calc(100%-4rem)] space-y-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              Review Listing Details
+
+        <div className="w-[75%] h-[90%] mt-5  bg-white border border-[#E3E0D8] rounded-md relative flex flex-col justify-between overflow-hidden">
+          <div className="p-8 md:p-10 overflow-y-auto max-h-[calc(100%-4.5rem)]">
+            <span className="archivo text-xs tracking-normal text-[#6B6F76]">
+              Step 4 of 4 — Review
+            </span>
+
+            <h2 className="font-serif text-3xl text-[#1C2321] mt-2 leading-tight">
+              {formData.job_title || "N/A"}
             </h2>
-            <div className="bg-gray-50 p-4 rounded-md border space-y-2 text-sm">
-              <p>
-                <strong>Title:</strong> {formData.job_title || "N/A"}
-              </p>
-              <p>
-                <strong>Type:</strong> {formData.employment_type || "N/A"}
-              </p>
-              <p>
-                <strong>Salary Range:</strong> {formData.minimum_salary} -{" "}
-                {formData.maximum_salary}
-              </p>
-              <p>
-                <strong>Education Required:</strong>{" "}
-                {formData.requirements.highest_education || "N/A"}
-              </p>
-              <p>
-                <strong>Experience:</strong> {formData.requirements.experience}{" "}
-                years
-              </p>
-              <p>
-                <strong>Screening Questions:</strong>{" "}
-                {formData.screening_questions.length}
-              </p>
-            </div>
+
+            <span className="inline-block mt-3 archivo text-xs text-red-800 bg-[#E7F2EE] border border-red-800/20 rounded px-2.5 py-1">
+              {formData.employment_type || "N/A"}
+            </span>
+
+            <dl className="mt-8 border-t border-[#E3E0D8] divide-y divide-[#E3E0D8]">
+              {fields.map((f) => (
+                <div
+                  key={f.label}
+                  className="flex items-baseline justify-between gap-6 py-4"
+                >
+                  <dt className="archivo text-sm text-[#6B6F76] shrink-0">
+                    {f.label}
+                  </dt>
+                  <dd className="text-sm text-[#1C2321] text-right">
+                    {f.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
-          <div className="w-[95%] h-12 absolute bottom-3 mx-5 flex items-center justify-end gap-5">
+          <div className="border-t border-[#E3E0D8] px-8 md:px-10 py-4 flex items-center justify-end gap-3 bg-[#FAF9F6]">
             <button
-              className="w-25 h-9 bg-gray-700/80 rounded-md hover:bg-gray-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-[#1C2321] border border-[#D8D5CD] rounded-md hover:bg-[#F1EFE9] transition-colors"
               onClick={handleBack}
             >
-              <p className="font-medium text-white archivo">Back</p>
+              Back
             </button>
             <button
-              className="w-25 h-9 bg-teal-700 rounded-md hover:bg-teal-600 transition-colors"
+              className="archivo h-10 px-5 text-sm font-medium text-white bg-red-800 rounded-md hover:bg-red-500 transition-colors"
               onClick={handleSubmit}
             >
-              <p className="font-medium text-white archivo">Submit</p>
+              Submit
             </button>
           </div>
         </div>
@@ -596,31 +630,40 @@ function JobReview({
 }
 
 // HEADER COMPONENT
-function Header({
-  current_step,
-  steps,
-}: {
+type HeaderProps = {
   current_step: number;
   steps: number;
-}) {
+};
+
+function Header({ current_step, steps }: HeaderProps) {
   const progress = (current_step / steps) * 100;
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-md px-6 py-4 shadow-sm">
+    <div className="w-full bg-[#FAF9F6] border border-[#E3E0D8] rounded-xl px-6 py-5 select-none">
       <div className="flex items-center justify-between">
-        <h1 className="public-sans text-xl font-semibold text-gray-900">
-          Create a job listing
-        </h1>
-        <p className="archivo text-sm text-gray-500">
-          Step{" "}
-          <span className="font-semibold text-teal-600">{current_step}</span> of{" "}
-          {steps}
-        </p>
+        <div>
+          <h1 className="font-serif text-2xl font-medium text-[#1C2321] tracking-tight leading-none">
+            Create a Job Listing
+          </h1>
+          <p className="archivo text-xs text-[#6B6F76] mt-1.5">
+            Fill in the details below to publish a new position
+          </p>
+        </div>
+
+        {/* Step Indicator Badge */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1EFE9] border border-[#E3E0D8]">
+          <span className="archivo text-xs text-[#6B6F76]">Step</span>
+          <span className="archivo text-xs font-semibold text-red-800">
+            {current_step}
+          </span>
+          <span className="archivo text-xs text-[#6B6F76]">of {steps}</span>
+        </div>
       </div>
 
-      <div className="mt-3 h-1 w-full rounded-full bg-gray-100 overflow-hidden">
+      {/* Progress Bar Container */}
+      <div className="mt-4 h-1.5 w-full rounded-full bg-[#F1EFE9] border border-[#E3E0D8]/60 overflow-hidden">
         <div
-          className="h-full rounded-full bg-red-500 transition-all duration-300"
+          className="h-full rounded-full bg-red-800 transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -628,65 +671,90 @@ function Header({
   );
 }
 
-// STEPPER COMPONENT
-const STEPS = [
-  "Job Details",
-  "Job Requirements",
-  "Screening Questions",
-  "Review & Submit",
-];
+const STEPS = ["Job Details", "Requirements", "Compensation", "Review & Post"];
 
-function JobFormStepper({ currentStep }: { currentStep: number }) {
+type JobFormStepperProps = {
+  currentStep: number;
+};
+
+function JobFormStepper({ currentStep }: JobFormStepperProps) {
   return (
-    <div className="border h-[90%] bg-white border-gray-300 shadow flex justify-center rounded-md">
-      <ol className="w-64 mt-8">
+    <div className="w-73 h-[70%] bg-[#FAF9F6] border border-[#E3E0D8] rounded-xl p-6 select-none flex flex-col">
+      {/* Header */}
+      <div className="mb-6">
+        <h3 className="font-serif text-lg text-[#1C2321] font-medium leading-tight">
+          Progress
+        </h3>
+        <p className="archivo text-xs text-[#6B6F76] mt-1">
+          Step {currentStep} of {STEPS.length}
+        </p>
+      </div>
+
+      <div className="h-[1px] bg-[#E3E0D8] mb-6" />
+
+      {/* Stepper List */}
+      <ol className="relative flex flex-col gap-6">
         {STEPS.map((label, i) => {
           const stepNumber = i + 1;
-          const done = stepNumber < currentStep;
-          const current = stepNumber === currentStep;
+          const isDone = stepNumber < currentStep;
+          const isCurrent = stepNumber === currentStep;
 
           return (
-            <li key={label} className="relative pb-2.5">
-              <div className="flex items-center gap-3 py-1">
-                <div
-                  className={
-                    "flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center " +
-                    (done
-                      ? "bg-red-500"
-                      : current
-                        ? "border-2 border-red-500 bg-white"
-                        : "border-2 border-gray-200 bg-white")
-                  }
-                >
-                  {done &&
-                    (i === 0 ? (
-                      <FaClipboardList className="w-2.5 h-2.5 text-white" />
-                    ) : (
-                      <FaCheck className="w-2.5 h-2.5 text-white" />
-                    ))}
-                </div>
+            <li key={label} className="relative flex items-start gap-3.5 group">
+              {/* Connecting Line */}
+              {i < STEPS.length - 1 && (
                 <span
-                  className={
-                    "text-sm " +
-                    (done
-                      ? "font-medium text-gray-800"
-                      : current
-                        ? "font-semibold text-gray-900"
-                        : "text-gray-400")
-                  }
+                  className={`absolute left-3 top-6 bottom-[-20px] w-[1.5px] transition-colors duration-300 ${
+                    isDone ? "bg-red-800" : "bg-[#E3E0D8]"
+                  }`}
+                  aria-hidden="true"
+                />
+              )}
+
+              {/* Step Circle Indicator */}
+              <div
+                className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${
+                  isDone
+                    ? "bg-red-800 text-[#FAF9F6]"
+                    : isCurrent
+                      ? "bg-[#FAF9F6] border-2 border-red-800] text-red-800"
+                      : "bg-[#F1EFE9] border border-[#E3E0D8] text-[#6B6F76]"
+                }`}
+              >
+                {isDone ? (
+                  <FaCheck size={10} />
+                ) : (
+                  <span
+                    className={`archivo text-[11px] font-semibold leading-none ${
+                      isCurrent ? "text-red-800" : "text-red-300"
+                    }`}
+                  >
+                    {stepNumber}
+                  </span>
+                )}
+              </div>
+
+              {/* Step Title & Subtitle */}
+              <div className="flex flex-col pt-0.5">
+                <span
+                  className={`archivo text-sm transition-colors duration-200 ${
+                    isCurrent
+                      ? "font-semibold text-[#1C2321]"
+                      : isDone
+                        ? "font-medium text-[#1C2321]/80"
+                        : "font-normal text-[#6B6F76]"
+                  }`}
                 >
                   {label}
                 </span>
+                <span className="archivo text-[10px] tracking-wider uppercase text-[#6B6F76] mt-0.5">
+                  {isDone
+                    ? "Completed"
+                    : isCurrent
+                      ? "In Progress"
+                      : "Upcoming"}
+                </span>
               </div>
-
-              {i < STEPS.length - 1 && (
-                <div
-                  className={
-                    "absolute left-[9px] top-7 w-px h-2.5 " +
-                    (done ? "bg-red-200" : "bg-gray-100")
-                  }
-                />
-              )}
             </li>
           );
         })}
