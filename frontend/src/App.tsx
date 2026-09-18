@@ -14,6 +14,10 @@ import ManageEmployee from "./features/root/ManageEmployee.tsx";
 import EmployeeDashboard from "./layout/employee/EmployeeDashboard.tsx";
 import EmployeeHome from "./page/EmployeeHome.tsx";
 import JobListing from "./features/employee/JobListing.tsx";
+import ManageJobListing from "./features/employee/ManageJobListing.tsx";
+import Dashboard from "./features/employee/Dashboard.tsx";
+import JobListingDetail from "./features/employee/JobListingDetail.tsx";
+import HomeLayout from "./layout/applicant/HomeLayout.tsx";
 
 function App() {
   return (
@@ -35,10 +39,17 @@ function App() {
           {/* EMPLOYEE */}
           <Route element={<ProtectedRoute path="/employee" />}>
             <Route path="/employee/dash" element={<EmployeeDashboard />}>
-               <Route path="job_listing" element={<JobListing />} />
+               <Route path="dashboard" element={<Dashboard />} />
+               <Route path="create_job_listing" element={<JobListing />} />
+               <Route path="manage_job_listing" element={<ManageJobListing/>}/>
+               <Route path="job_listing" element={<JobListingDetail/>}/>
             </Route>
           </Route>
 
+          {/* EMPLOYEE */}
+          <Route path="/" element={<HomeLayout/>}>
+          
+          </Route>
           <Route path="/test" element={<Test />} />
         </Routes>
       </BrowserRouter>
