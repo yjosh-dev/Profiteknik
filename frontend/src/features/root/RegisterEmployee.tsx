@@ -3,16 +3,13 @@ import { AxiosError } from "axios";
 
 import ContentContainer from "../../components/ui/ContentContainer";
 import Dialog from "../../components/ui/Dialog";
+import FormInput from "../../components/ui/FormInput";
+import StatusModal from "../../components/ui/StatusModal";
+import { employeeAccount } from "../../service/api/root/employeeAccountService";
 
-import { FaImages } from "react-icons/fa";
-import { FaChevronUp, FaChevronDown, FaSave, FaCheckCircle } from "react-icons/fa";
+import { FaImages, FaSave, FaCheckCircle } from "react-icons/fa";
 import { MdDelete, MdOutlineReportGmailerrorred } from "react-icons/md";
 import { RxCross2 } from "react-icons/rx";
-
-import FormInput from "../../components/ui/FormInput";
-
-import { employeeAccount } from "../../service/api/root/employeeAccountService";
-import StatusModal from "../../components/ui/StatusModal";
 
 export default function RegisterEmployee() {
   const [savingDialog, setSavingDialog] = useState(false);
@@ -20,77 +17,69 @@ export default function RegisterEmployee() {
   const [previewImage, setPreviewImage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<boolean | string>(false);
-  const [incompleteInput, setIncompleteInput] = useState(true);
   const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState<{
-    first_name: string;
-    middle_name: string;
-    last_name: string;
-    email: string;
-    suffix: string;
-    salutations: string;
-    sex: string;
-    profile_image: File | string;
-    username: string;
-    password: string;
-  }>({
+
+  const [formData, setFormData] = useState({
     first_name: "",
     middle_name: "",
     last_name: "",
     email: "",
+    phone: "",
     suffix: "",
     salutations: "",
     sex: "Male",
-    profile_image: "",
+    profile_image: "" as File | string,
     username: "",
     password: "",
   });
 
-  const validateInput = (data: Record<string, any>) => {
-    const hasEmptyField = Object.values(data).some(
-      (value) => value === "" || value === null || value === undefined,
-    );
+  const validateInput = (data: typeof formData) => {
+    // List required keys (skipping optional fields if any, e.g., middle_name / suffix)
+    const requiredKeys: (keyof typeof formData)[] = [
+      "first_name",
+      "last_name",
+      "email",
+      "username",
+      "password",
+    ];
 
-    if (hasEmptyField) {
-      return false;
-    } else {
-      return true;
-    }
+    return requiredKeys.every((key) => Boolean(data[key]));
   };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, id, value, type } = e.target;
+    const fieldKey = name || id;
 
-    if (type === "file" || (name || id) === "profile_image") return;
+    if (type === "file" || fieldKey === "profile_image") return;
 
     setFormData((prev) => ({
       ...prev,
-      [name || id]: value,
+      [fieldKey]: value,
     }));
   };
 
-  useEffect(() => {}, [incompleteInput]);
-
   const onDelete = () => {
-    setFormData({
-      ...formData,
+    if (previewImage) {
+      URL.revokeObjectURL(previewImage);
+    }
+    setFormData((prev) => ({
+      ...prev,
       profile_image: "",
-    });
+    }));
     setPreviewImage("");
   };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (file) {
-      // 1. Set raw binary file in form state
       setFormData((prev) => ({
         ...prev,
         profile_image: file,
       }));
 
-      // 2. Set preview string in preview state
       const previewUrl = URL.createObjectURL(file);
       setPreviewImage(previewUrl);
     }
@@ -105,11 +94,15 @@ export default function RegisterEmployee() {
   };
 
   const clearInput = () => {
+    if (previewImage) {
+      URL.revokeObjectURL(previewImage);
+    }
     setFormData({
       first_name: "",
       middle_name: "",
       last_name: "",
       email: "",
+      phone: "",
       suffix: "",
       salutations: "",
       sex: "Male",
@@ -130,14 +123,15 @@ export default function RegisterEmployee() {
   };
 
   const registerEmployee = async () => {
-    if (validateInput(formData)) {
-      console.log("Complete");
-    } else {
-      console.log("Incomplete");
+    if (!validateInput(formData)) {
+      setSavingDialog(false);
+      setError("Please fill in all the required fields.");
       return;
     }
+
     const form = new FormData();
     form.append("email", formData.email);
+    form.append("phone", formData.phone);
     form.append("first_name", formData.first_name);
     form.append("last_name", formData.last_name);
     form.append("middle_name", formData.middle_name);
@@ -147,41 +141,40 @@ export default function RegisterEmployee() {
     form.append("suffix", formData.suffix);
     form.append("username", formData.username);
 
-    const rawImage = formData.profile_image as any;
-
+    const rawImage = formData.profile_image;
     if (rawImage && rawImage instanceof File) {
       form.append("profile_image", rawImage, rawImage.name);
-    } else {
-      console.warn("formData.profile_image is NOT a File instance:", rawImage);
     }
 
     try {
       setSavingDialog(false);
       setLoading(true);
-      const response = await employeeAccount.registerEmployee(form);
+      await employeeAccount.registerEmployee(form);
       setSuccess(true);
-      setLoading(false)
-      clearInput();
-    } catch (error) {
       setLoading(false);
-      if (error instanceof AxiosError) {
-        setError(error.response?.data?.message);
-        console.error("API Error Response:", error.response?.data);
-        console.error("Status Code:", error.response?.status);
+      clearInput();
+    } catch (err) {
+      setLoading(false);
+      if (err instanceof AxiosError) {
+        setError(
+          err.response?.data?.message ||
+            "An error occurred during registration.",
+        );
       } else {
-        console.error("Unexpected Error:", error);
+        setError("An unexpected error occurred.");
       }
     }
   };
 
   return (
     <>
-      <ContentContainer className={"flex py-5 px-5 bg-white"}>
-        <aside className="w-[30%] h-full pr-5 border-r-2  border-gray-400 ">
-          <h1 className="font-semibold text-base text-gray-600">
+      <ContentContainer className={"flex py-5 px-5 bg-white relative"}>
+        {/* ASIDE - LEFT SIDE */}
+        <aside className="w-[30%] h-full pr-5 border-r-2 border-gray-300">
+          <h1 className="font-semibold text-base text-gray-700">
             Account Management
           </h1>
-          <div className="mt-2 w-full h-[40%] border-3 rounded-md border-gray-300 bg-gray-200">
+          <div className="mt-2 w-full h-48 border-2 border-dashed rounded-md border-gray-300 bg-gray-50 overflow-hidden">
             {previewImage ? (
               <PreviewPanel onDelete={onDelete} image={previewImage} />
             ) : (
@@ -190,133 +183,152 @@ export default function RegisterEmployee() {
           </div>
           <input
             type="file"
+            accept="image/*"
             onChange={(e) => {
-              e.stopPropagation(); // Prevents generic form handlers from running
+              e.stopPropagation();
               handleImageUpload(e);
             }}
             className="mt-2 block w-full h-9 text-sm text-gray-500
-          file:mr-4 file:py-2 file:px-4
-          file:rounded-md file:border-0
-          file:text-sm file:font-semibold
-        file:bg-gray-200 file:text-gray-700
-        hover:file:bg-gray-300 file:cursor-pointer
-          cursor-pointer bg-gray-100 rounded-md border border-gray-300"
+              file:mr-4 file:py-1.5 file:px-4
+              file:rounded-md file:border-0
+              file:text-xs file:font-semibold
+              file:bg-gray-200 file:text-gray-700
+              hover:file:bg-gray-300 file:cursor-pointer
+              cursor-pointer bg-gray-50 rounded-md border border-gray-300"
           />
-          <h2 className="mt-5 font-semibold text-base text-gray-600">
+
+          <h2 className="mt-6 font-semibold text-base text-gray-700">
             Account Credentials
           </h2>
-          <form>
+          <div className="space-y-3 mt-2">
             <CredentialsInput
               label="Username:"
               type="text"
               id="username"
+              value={formData.username}
               placeholder="Enter employee's username."
-              handleGenerate={() => alert(formData.username)}
+              handleGenerate={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  username: `user_${Math.floor(1000 + Math.random() * 9000)}`,
+                }))
+              }
               onChange={handleChange}
             />
             <CredentialsInput
               label="Password:"
-              type="text"
+              type="password"
               id="password"
+              value={formData.password}
               placeholder="Enter employee's password."
-              handleGenerate={() => alert(formData.password)}
+              handleGenerate={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  password: Math.random().toString(36).slice(-8),
+                }))
+              }
               onChange={handleChange}
             />
-          </form>
+          </div>
         </aside>
-        <main className="w-[65%] h-full ml-5">
-          <div className="w-full h-[90%] ">
-            <h2 className="font-semibold text-base text-gray-600">
+
+        {/* MAIN - RIGHT SIDE */}
+        <main className="w-[70%] h-full ml-6 flex flex-col justify-between">
+          <div>
+            <h2 className="font-semibold text-base text-gray-700">
               Employee Information
             </h2>
-            <div className="mt-3">
-              <form className="grid grid-cols-2 gap-5 w-full mt-3">
-                <FormInput
-                  id="first_name"
-                  value={formData.first_name}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md"
+            <div className="grid grid-cols-2 gap-4 w-full mt-3">
+              <FormInput
+                id="first_name"
+                value={formData.first_name}
+                className="w-full h-9 bg-white border border-gray-300 font-medium text-sm px-3 rounded-md focus:border-blue-500 focus:outline-none"
+                onChange={handleChange}
+                placeholder="First Name *"
+              />
+              <FormInput
+                id="middle_name"
+                value={formData.middle_name}
+                className="w-full h-9 bg-white border border-gray-300 font-medium text-sm px-3 rounded-md focus:border-blue-500 focus:outline-none"
+                onChange={handleChange}
+                placeholder="Middle Name"
+              />
+              <FormInput
+                id="last_name"
+                value={formData.last_name}
+                className="w-full h-9 bg-white border border-gray-300 font-medium text-sm px-3 rounded-md focus:border-blue-500 focus:outline-none"
+                onChange={handleChange}
+                placeholder="Last Name *"
+              />
+
+              <div className="flex gap-2">
+                <Dropdown
+                  input_name="suffix"
+                  value={formData.suffix}
+                  choice={["Jr", "Sr", "III", "IV"]}
                   onChange={handleChange}
-                  placeholder="First Name"
+                  title="Suffix"
                 />
-                <FormInput
-                  id="middle_name"
-                  value={formData.middle_name}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3  rounded-md"
+                <Dropdown
+                  input_name="salutations"
+                  value={formData.salutations}
+                  title="Salutations"
+                  choice={["Mr.", "Ms.", "Mrs."]}
                   onChange={handleChange}
-                  placeholder="Middle Name"
                 />
-                <FormInput
-                  id="last_name"
-                  value={formData.last_name}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md"
+                <Dropdown
+                  input_name="sex"
+                  value={formData.sex}
+                  choice={["Male", "Female", "Other"]}
                   onChange={handleChange}
-                  placeholder="Last Name"
+                  title="Sex"
                 />
-                <div className="flex justify-between">
-                  <Dropdown
-                    input_name="suffix"
-                    value={formData.suffix}
-                    choice={["Jr", "Sr", "Other"]}
-                    onChange={handleChange}
-                    title="Suffix"
-                  />
-                  <Dropdown
-                    input_name="salutations"
-                    value={formData.salutations}
-                    title="Salutations"
-                    choice={["Mr.", "Ms.", "Mrs."]}
-                    onChange={handleChange}
-                  />
-                  <Dropdown
-                    input_name="sex"
-                    value={formData.sex}
-                    choice={["Male", "Female", "other"]}
-                    onChange={handleChange}
-                    title="Sex"
-                  />
-                </div>             
-              </form>
+              </div>
             </div>
-            <h2 className="font-semibold text-base text-gray-600 mt-10">
+
+            <h2 className="font-semibold text-base text-gray-700 mt-8">
               Employee Contacts
             </h2>
-            <div className="mt-3">
-              <form className="grid grid-cols-2 gap-5 w-full mt-3">
-                <FormInput
-                  id="email"
-                  value={formData.email}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md "
-                  onChange={handleChange}
-                  placeholder="Email"
-                />
-                <FormInput
-                  id="email"
-                  value={formData.email}
-                  className="w-full h-8 bg-white border border-gray-400 font-medium text-base px-3 rounded-md col-"
-                  onChange={handleChange}
-                  placeholder="Phone no."
-                />
-              </form>
+            <div className="grid grid-cols-2 gap-4 w-full mt-3">
+              <FormInput
+                id="email"
+                value={formData.email}
+                className="w-full h-9 bg-white border border-gray-300 font-medium text-sm px-3 rounded-md focus:border-blue-500 focus:outline-none"
+                onChange={handleChange}
+                placeholder="Email Address *"
+              />
+              <FormInput
+                id="phone"
+                value={formData.phone}
+                className="w-full h-9 bg-white border border-gray-300 font-medium text-sm px-3 rounded-md focus:border-blue-500 focus:outline-none"
+                onChange={handleChange}
+                placeholder="Phone Number"
+              />
             </div>
           </div>
-          <div className="flex gap-3 absolute right-15 text-white ">
+
+          {/* ACTION BUTTONS */}
+          <div className="flex justify-end gap-3 mt-8 text-white pt-4 border-t border-gray-200">
             <button
-              className="w-24 h-10 rounded-sm flex items-center justify-center gap-2 bg-red-600/80 border border-red-200 hover:bg-red-400"
-              onClick={() => handleClear()}
+              type="button"
+              className="w-28 h-10 rounded-md flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 font-medium text-sm transition-colors cursor-pointer"
+              onClick={handleClear}
             >
-              <MdDelete size={20} />
+              <MdDelete size={18} />
               Clear
             </button>
             <button
-              className="w-24 h-10 rounded-sm flex items-center justify-center gap-2 bg-green-600/80 border border-green-200 hover:bg-green-400"
-              onClick={() => handleSave()}
+              type="button"
+              className="w-28 h-10 rounded-md flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 font-medium text-sm transition-colors cursor-pointer"
+              onClick={handleSave}
             >
-              <FaSave size={20} />
+              <FaSave size={18} />
               Save
             </button>
           </div>
         </main>
 
+        {/* DIALOGS & MODALS */}
         {savingDialog && (
           <Dialog
             isOpen={savingDialog}
@@ -326,8 +338,8 @@ export default function RegisterEmployee() {
             description="Are you sure you want to save these changes to the employee profile?"
             confirmText="Save Changes"
             cancelText="Cancel"
-            confirmColor="bg-green-600 hover:bg-green-400 text-white"
-            icon={<FaSave size={40} />}
+            confirmColor="bg-emerald-600 hover:bg-emerald-700 text-white"
+            icon={<FaSave size={40} className="text-emerald-600" />}
           />
         )}
 
@@ -337,19 +349,21 @@ export default function RegisterEmployee() {
             onClose={() => setClearingDialog(false)}
             onConfirm={clearInput}
             heading="Clear Changes?"
-            description="Are you sure you want to clear all the input?"
-            confirmText="Clear"
+            description="Are you sure you want to clear all form fields?"
+            confirmText="Clear Form"
             cancelText="Cancel"
-            confirmColor="bg-green-600 hover:bg-green-400 text-white"
-            icon={<FaSave size={40} />}
+            confirmColor="bg-red-600 hover:bg-red-700 text-white"
+            icon={<MdDelete size={40} className="text-red-600" />}
           />
         )}
 
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="flex flex-col items-center gap-3 rounded-xl bg-white px-8 py-6 shadow-lg">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-red-600" />
-              <p className="text-sm font-medium text-gray-700">Loading...</p>
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-emerald-600" />
+              <p className="text-sm font-medium text-gray-700">
+                Saving Employee...
+              </p>
             </div>
           </div>
         )}
@@ -357,10 +371,15 @@ export default function RegisterEmployee() {
         {error && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <StatusModal
-              heading="An error has occured"
+              heading="An Error Has Occurred"
               description={error.toString()}
-              icon={<MdOutlineReportGmailerrorred size={45} />}
-              button_color="bg-[#FF0000]"
+              icon={
+                <MdOutlineReportGmailerrorred
+                  size={45}
+                  className="text-red-600"
+                />
+              }
+              button_color="bg-red-600 hover:bg-red-700"
               button_name="Close"
               onClick={() => setError(false)}
             />
@@ -371,15 +390,14 @@ export default function RegisterEmployee() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <StatusModal
               heading="Registration Successful"
-              description="Employee account successfully created!"
-              icon={<FaCheckCircle  size={45} />}
-              button_color="bg-[#008000]"
+              description="Employee account was successfully created!"
+              icon={<FaCheckCircle size={45} className="text-emerald-600" />}
+              button_color="bg-emerald-600 hover:bg-emerald-700"
               button_name="Close"
               onClick={() => setSuccess(false)}
             />
           </div>
         )}
-
       </ContentContainer>
     </>
   );
@@ -387,16 +405,14 @@ export default function RegisterEmployee() {
 
 function UploadPanel() {
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-      <FaImages size={45} color="A8A492" />
-      <div>
-        <p className="text-sm font-medium text-center">
-          Upload the employee's profile picture here.
-        </p>
-        <p className="text-xs text-gray-600">
-          Click the button or drag the image to upload it properly.
-        </p>
-      </div>
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+      <FaImages size={36} className="text-gray-400 mb-2" />
+      <p className="text-xs font-medium text-gray-700">
+        Upload Profile Picture
+      </p>
+      <p className="text-[11px] text-gray-500 mt-0.5">
+        PNG or JPG files accepted.
+      </p>
     </div>
   );
 }
@@ -409,14 +425,19 @@ function PreviewPanel({
   onDelete: () => void;
 }) {
   return (
-    <div className="w-full h-full flex items-center justify-center px-3 py-3 relative">
-      <div
-        className="w-8 h-8 rounded-full bg-gray-400 absolute right-2 top-2 flex items-center justify-center"
+    <div className="w-full h-full flex items-center justify-center p-2 relative bg-gray-100">
+      <button
+        type="button"
+        className="w-7 h-7 rounded-full bg-gray-800/70 hover:bg-gray-900 text-white absolute right-2 top-2 flex items-center justify-center cursor-pointer transition-colors"
         onClick={onDelete}
       >
-        <RxCross2 />
-      </div>
-      <img src={image} className="w-[60%] h-[80%]" />
+        <RxCross2 size={16} />
+      </button>
+      <img
+        src={image}
+        alt="Employee Preview"
+        className="max-h-full max-w-full object-contain rounded-md"
+      />
     </div>
   );
 }
@@ -424,6 +445,7 @@ function PreviewPanel({
 type CredentialsInputType = {
   label: string;
   id: string;
+  value: string;
   placeholder: string;
   type: string;
   handleGenerate: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -433,35 +455,37 @@ type CredentialsInputType = {
 function CredentialsInput({
   label,
   id,
+  value,
   placeholder,
   type,
   handleGenerate,
   onChange,
 }: CredentialsInputType) {
   return (
-    <div className="mt-2 grid grid-cols-[1fr_auto] gap-1 items-center">
-      {/* Label spans both columns */}
-      <label className="col-span-2 text-base font-medium text-gray-500">
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={id}
+        className="text-xs font-semibold text-gray-600 uppercase tracking-wider"
+      >
         {label}
       </label>
-
-      {/* Input fills the first column */}
-      <input
-        type={type}
-        id={id}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="h-9 px-2 rounded-md border-2 bg-white text-xs border-gray-300 focus:outline-none focus:border-blue-500"
-      />
-
-      {/* Button sits in the second column beside the input */}
-      <button
-        type="button"
-        className="h-9 px-4 rounded-md border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 font-medium text-sm transition"
-        onClick={handleGenerate}
-      >
-        Generate
-      </button>
+      <div className="flex gap-2">
+        <input
+          type={type}
+          id={id}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="h-9 w-full px-3 rounded-md border border-gray-300 bg-white text-xs text-gray-800 focus:outline-none focus:border-blue-500"
+        />
+        <button
+          type="button"
+          className="h-9 px-3 shrink-0 rounded-md border border-gray-300 bg-gray-100 hover:bg-gray-200 font-medium text-xs text-gray-700 transition cursor-pointer"
+          onClick={handleGenerate}
+        >
+          Generate
+        </button>
+      </div>
     </div>
   );
 }
@@ -481,19 +505,16 @@ function Dropdown({
   value,
   title,
 }: DropdownType) {
-  const [isActive, setIsActive] = useState(false);
-  const [selected, setSelected] = useState();
   return (
-    <div className="flex flex-col gap-1 w-[30%] h-8">
+    <div className="flex flex-col gap-1 flex-1">
       <select
         id={input_name}
         name={input_name}
         value={value}
-        defaultValue="" // Binds selected option to state
-        onChange={onChange} // Triggers state update on selection change
-        className="h-9 px-3 rounded-md border-2 border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+        onChange={onChange}
+        className="h-9 px-2 rounded-md border border-gray-300 bg-white text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
       >
-        <option value="" disabled hidden>
+        <option value="" disabled>
           {title}
         </option>
         {choice.map((item, index) => (
