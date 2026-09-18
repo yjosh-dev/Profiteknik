@@ -32,4 +32,12 @@ export const jobListingApi = {
       },
     });
   },
+
+  getJobListing: async (job_id: number | string) => {
+    return await axiosClient.get(`/employee/job_listings/${job_id}`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  },
 };

@@ -3,9 +3,15 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Services\Employee\JobListingService;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+
+use App\Models\JobListing;
+use App\Models\JobScreeningQuestions;
+
+use App\Services\Employee\JobListingService;
 
 class JobListingController extends Controller
 {
@@ -20,9 +26,27 @@ class JobListingController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return "hi";
+      $employee_data = JobListing::with(['requirements', 'screeningQuestions'])
+                                 ->orderBy('posted_at', 'desc')
+                                 ->paginate(10);
+
+
+      $employee_data->getCollection()->transform(function ($job) {
+        return [
+          'job_id'          => $job->job_id,
+          'job_title'       => $job->job_title,
+          'minimum_salary'  => $job->minimum_salary,
+          'maximum_salary'  => $job->maximum_salary,
+          'vacant_position' => $job->vacant_position,
+          'employment_type' => $job->employment_type,
+          'posted_until'    => $job->posted_until ? $job->posted_until->format('Y-m-d') : null,
+          'status'          => 'Active', 
+      ];
+      });
+
+      return response()->json($employee_data);
     }
 
    /**
@@ -67,7 +91,10 @@ class JobListingController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $data = JobListing::where('job_id', $id)
+                          ->with(['requirements', 'screeningQuestions'])
+                          ->firstOrFail();
+        return $data;
     }
 
     /**

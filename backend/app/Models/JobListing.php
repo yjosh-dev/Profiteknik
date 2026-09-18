@@ -4,7 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 use App\Models\EmployeeAccount;
+use App\Models\JobRequirements;
+use App\Models\JobScreeningQuestions;
 
 class JobListing extends Model
 {
@@ -41,4 +46,15 @@ class JobListing extends Model
     {
         return $this->belongsTo(EmployeeAccount::class, 'listed_by', 'employee_id');
     }
+
+    public function requirements(): HasOne
+    {
+        return $this->hasOne(JobRequirements::class, 'job_id', 'job_id');
+    }
+
+     public function screeningQuestions(): HasMany
+    {
+        return $this->hasMany(JobScreeningQuestions::class, 'job_id', 'job_id');
+    }
+
 }
