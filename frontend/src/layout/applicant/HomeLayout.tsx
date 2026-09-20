@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
-import Home from "../../page/Home"
+import Home from "../../page/Home";
 
 export default function HomeLayout() {
   return (
     <div>
       <Navbar />
-      <Home/>
+      <Outlet />
     </div>
   );
 }
@@ -14,7 +15,12 @@ export default function HomeLayout() {
 function Navbar() {
   const [activeTab, setActiveTab] = useState("Home");
 
-  const navItems = ["Home", "Jobs", "Saved", "Career"];
+  const navItems = [
+    { title: "Home", path: "home" },
+    { title: "Jobs", path: "job_wall" },
+    { title: "Saved", path: "saved" },
+    { title: "Career", path: "careers" },
+  ];
 
   return (
     <header className="w-full bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
@@ -38,22 +44,22 @@ function Navbar() {
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                onClick={() => setActiveTab(item)}
+              <NavLink
+                key={item.title}
+                to={item.path}
+                onClick={() => setActiveTab(item.title)}
                 className={`text-sm font-medium transition-colors hover:text-red-600 relative py-2 ${
-                  activeTab === item
+                  activeTab === item.title
                     ? "text-zinc-900 font-bold"
                     : "text-zinc-600"
                 }`}
               >
-                {item}
+                {item.title}
                 {/* Active Indicator */}
-                {activeTab === item && (
+                {activeTab === item.title && (
                   <span className="absolute bottom-0 left-0 w-full h-[2.5px] bg-red-600 rounded-full" />
                 )}
-              </a>
+              </NavLink>
             ))}
           </nav>
 

@@ -31,7 +31,7 @@ const avatars = [
 
 const partners = ["HubSpot", "Dropbox", "Square", "Intercom", "Grammarly"];
 
-export default function HomeLayout() {
+export default function Home() {
   return (
     <div className="relative w-full h-[92vh] flex flex-col items-center overflow-hidden bg-white">
       {/* content */}
