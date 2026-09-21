@@ -24,7 +24,7 @@ function Navbar() {
 
   return (
     <header className="w-full bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-20 ">
         <div className="flex items-center justify-between h-20">
           {/* Logo Section / Placeholder */}
           <div className="flex items-center gap-3 cursor-pointer">
@@ -33,7 +33,7 @@ function Navbar() {
               <img src={logo} className="w-full h-full" />
             </div>
 
-            <span className="font-serif text-lg text-[#1C2321] tracking-wide font-medium leading-none">
+            <span className="text-lg text-[#1C2321] tracking-wide font-medium leading-none">
               Profiteknik{" "}
               <span className="archivo text-base uppercase tracking-widest text-red-800 mt-1">
                 Corporation
@@ -75,7 +75,7 @@ function Navbar() {
             </div>
 
             {/* Login Button */}
-            <button className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+            <button className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-15 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
               <span>Login</span>
             </button>
           </div>
