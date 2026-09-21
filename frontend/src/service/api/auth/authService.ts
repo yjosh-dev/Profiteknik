@@ -1,7 +1,16 @@
-import { UseAuth } from "../../../context/AuthProvider";
+import Header from "../../../components/common/Header"
+import axiosClient from "../axiosClient"
 
-const revokeToken = () => {
-  const { setAuthData } = UseAuth();
-  setAuthData(null);
-  localStorage.removeItem("token");
-};
+export const Logout = {
+    rootLogout: async({token} : {token: string}) => (
+         axiosClient.post('/employee/auth/logout', {
+             headers: {Authorization: `Bearer ${token}`},
+         })
+    ),
+
+    employeeLogout: async({token} : {token: string}) => (
+         axiosClient.post('/employee/auth/logout', {
+             headers: {Authorization: `Bearer ${token}`},
+         })
+    )
+}
