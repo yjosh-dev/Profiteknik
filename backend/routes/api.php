@@ -33,6 +33,7 @@ Route::prefix('/root')->group(function () {
 
 Route::prefix('/employee')->group(function () {
      Route::prefix("/auth")->controller(EmployeeAuthController::class)->group(function () {
+        Route::post('/logout', 'authLogout')->middleware('auth:sanctum');
         Route::post('/login', 'authLogin' );
         Route::middleware('auth:sanctum')->group(function () {
            Route::get('/me', 'verifyMe');
