@@ -32,7 +32,7 @@ export default function StatusModal({
         {icon}
       </div>
 
-      <h1 className="font-serif text-2xl text-[#1C2321] text-center leading-tight">
+      <h1 className=" text-2xl text-[#1C2321] text-center leading-tight">
         {heading}
       </h1>
 

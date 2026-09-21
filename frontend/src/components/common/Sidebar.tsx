@@ -118,10 +118,10 @@ export default function Sidebar({ handleMinimize, isActive }: SidebarProps) {
             <img src={logo} alt="Profiteknik" className="w-9 h-9 object-contain" />
             {isActive && (
               <div className="flex flex-col overflow-hidden whitespace-nowrap">
-                <span className="font-serif text-base text-[#1C2321] tracking-wide font-medium leading-none">
+                <span className="text-base text-[#1C2321] tracking-wide font-medium leading-none">
                   Profiteknik
                 </span>
-                <span className="archivo text-[10px] uppercase tracking-widest text-[#6B6F76] mt-1">
+                <span className="archivo text-[10px] uppercase tracking-widest text-red-800 mt-1">
                   Corporation
                 </span>
               </div>
