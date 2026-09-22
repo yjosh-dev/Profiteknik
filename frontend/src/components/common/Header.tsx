@@ -7,7 +7,7 @@ import { FaUser } from "react-icons/fa";
 import { UseAuth } from "../../hooks/useAuth";
 import { CapitalizeFirst } from "../../utils/CapitalizeFirstLetter";
 
-export default function Header() {
+export default function Header({onLogout} : {onLogout: () => void}) {
   const { userData } = UseAuth();
   const data = userData?.userData;
 
@@ -18,6 +18,7 @@ export default function Header() {
         user={data?.name}
         role={data?.role}
         profile_image={data?.profile_image}
+        onLogout={onLogout}
       />
     </header>
   );
@@ -41,9 +42,10 @@ type ProfileBlockProps = {
   user?: string;
   role?: string;
   profile_image?: string;
+  onLogout: () => void
 };
 
-function ProfileBlock({ user, role, profile_image }: ProfileBlockProps) {
+function ProfileBlock({ user, role, profile_image, onLogout }: ProfileBlockProps) {
   const [dropdown, setDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +105,7 @@ function ProfileBlock({ user, role, profile_image }: ProfileBlockProps) {
             role={role}
             profile_image={profile_image}
             onClose={() => setDropdown(false)}
+            onLogout={onLogout}
           />
         )}
       </div>
@@ -112,9 +115,10 @@ function ProfileBlock({ user, role, profile_image }: ProfileBlockProps) {
 
 type DropdownMenuProps = ProfileBlockProps & {
   onClose: () => void;
+  onLogout: () => void;
 };
 
-function DropdownMenu({ user, role, profile_image, onClose }: DropdownMenuProps) {
+function DropdownMenu({ user, role, profile_image, onClose, onLogout }: DropdownMenuProps) {
   const imageUrl = profile_image ? `http://localhost:8000/storage/${profile_image}` : null;
 
   const menu = [
@@ -131,7 +135,7 @@ function DropdownMenu({ user, role, profile_image, onClose }: DropdownMenuProps)
     {
       icon: <IoLogOutSharp size={15} />,
       title: "Log out",
-      action: () => alert("Logging out..."),
+      action: onLogout,
       isDestructive: true,
     },
   ];
