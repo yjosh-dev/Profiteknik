@@ -37,4 +37,10 @@ class EmployeeAuthController extends Controller
         $verify = $this->EmployeeAuthService->verify($request);
         return $verify;
     }
+
+    public function authLogout(Request $request)
+    {
+        $logout = $this->EmployeeAuthService->logout($request);
+        return $logout;
+    }
 }

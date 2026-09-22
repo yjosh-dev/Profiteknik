@@ -53,4 +53,16 @@ class EmployeeAuthService {
        ];
         return $data;
     }
+
+    public function logout($data)
+    {
+        $username = $data->user();
+        $logout = $username->tokens()->delete();
+
+        if(!$logout){
+            throw new Exception('Error occured while logging out. Please try again later.');
+        }
+
+        return $username->username;
+    }
 }
