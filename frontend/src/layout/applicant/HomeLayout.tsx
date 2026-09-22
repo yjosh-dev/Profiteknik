@@ -16,7 +16,7 @@ function Navbar() {
   const [activeTab, setActiveTab] = useState("Home");
 
   const navItems = [
-    { title: "Home", path: "home" },
+    { title: "Home", path: "" },
     { title: "Jobs", path: "job_wall" },
     { title: "Saved", path: "saved" },
     { title: "Career", path: "careers" },

@@ -43,16 +43,13 @@ function App() {
               <Route path="create_job_listing" element={<JobListing />} />
               <Route path="manage_job_listing" element={<ManageJobListing />} />
               <Route path="job_listing" element={<JobListingDetail />} />
-             
             </Route>
           </Route>
 
           {/* EMPLOYEE */}
           <Route path="/applicant" element={<HomeLayout />}>
-            <Route path="home" element={<Home />} />
+            <Route path="" element={<Home />} />
           </Route>
-
-     
         </Routes>
       </BrowserRouter>
     </ContextProvider>
