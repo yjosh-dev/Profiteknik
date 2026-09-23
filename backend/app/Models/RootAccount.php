@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class RootAccount extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $table = 'root_account';
+
     protected $primaryKey = 'id';
 
     protected $fillable = [
@@ -23,17 +22,18 @@ class RootAccount extends Authenticatable
         'first_name',
         'middle_name',
         'last_name',
-        'last_login'
+        'last_login',
     ];
 
     protected $hidden = [
-        'password'
+        'password',
     ];
 
-    protected function casts(): array {
+    protected function casts(): array
+    {
         return [
             'password' => 'hashed',
-            'last_login' => 'datetime'
+            'last_login' => 'datetime',
         ];
     }
 }

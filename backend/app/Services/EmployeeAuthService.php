@@ -2,39 +2,42 @@
 
 namespace App\Services;
 
+use App\Models\EmployeeAccount;
 use Exception;
 use Illuminate\Http\Request;
-use App\Models\EmployeeAccount;
 use Illuminate\Support\Facades\Hash;
 
-class EmployeeAuthService {
+class EmployeeAuthService
+{
+    public function attemptLogin(array $array)
+    {
+        $employee = $this->checkUsername($array['username']);
 
-    public function attemptLogin(array $array) {
-       $employee = $this->checkUsername($array['username']);
+        if (! $employee) {
+            throw new Exception('Invalid username or password. Please try again');
+        }
 
-       if(!$employee){
-         throw new Exception('Invalid username or password. Please try again');
-       }
+        $validPW = $this->compareHash($array['password'], $employee->password);
+        if (! $validPW) {
+            throw new Exception('Invalid username or password. Please try again');
+        }
 
-       $validPW = $this->compareHash($array['password'], $employee->password);
-       if(!$validPW){
-         throw new Exception('Invalid username or password. Please try again');
-       }
+        $token = $this->issueToken($employee);
 
-       $token = $this->issueToken($employee);
+        return $token;
+    }
 
-       return $token;
-    } 
-
-    private function checkUsername($username){
+    private function checkUsername($username)
+    {
         return EmployeeAccount::where('username', $username)->first();
     }
 
-    private function compareHash($to_hash, $hashed){
-       return Hash::check($to_hash, $hashed);
+    private function compareHash($to_hash, $hashed)
+    {
+        return Hash::check($to_hash, $hashed);
     }
 
-     public function issueToken($user)
+    public function issueToken($user)
     {
         return $user->createToken('auth_token', ['*'])->plainTextToken;
     }
@@ -44,13 +47,14 @@ class EmployeeAuthService {
         $user = $request->user();
         $info = $user->info;
         $data = [
-          "id" => $info->employee_id,
-          "first_name" => $info->first_name,
-          "middle_name" => $info->middle_name,
-          "last_name" => $info->last_name,
-          "profile_image" => $info->profile_image,
-          "role" => "employee"
-       ];
+            'id' => $info->employee_id,
+            'first_name' => $info->first_name,
+            'middle_name' => $info->middle_name,
+            'last_name' => $info->last_name,
+            'profile_image' => $info->profile_image,
+            'role' => 'employee',
+        ];
+
         return $data;
     }
 
@@ -59,7 +63,7 @@ class EmployeeAuthService {
         $username = $data->user();
         $logout = $username->tokens()->delete();
 
-        if(!$logout){
+        if (! $logout) {
             throw new Exception('Error occured while logging out. Please try again later.');
         }
 

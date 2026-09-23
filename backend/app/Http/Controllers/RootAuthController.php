@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
-use Illuminate\Http\Request;
 use App\Http\Requests\RootAuthRequest;
 use App\Services\RootAuthService;
+use Exception;
+use Illuminate\Http\Request;
 
 class RootAuthController extends Controller
 {
@@ -15,35 +15,35 @@ class RootAuthController extends Controller
 
     public function authLogin(RootAuthRequest $rootAuthRequest)
     {
-       try{
+        try {
 
-          $login = $this->rootAuthService->attemptLogin($rootAuthRequest->validated());
+            $login = $this->rootAuthService->attemptLogin($rootAuthRequest->validated());
 
-          return response()->json([
-             'success' => true,
-             'message' => "Login successfully!",
-             'data' => $login
-          ], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successfully!',
+                'data' => $login,
+            ], 200);
 
-       }catch(Exception $e){
-          return response()->json([
-             'success' => false,
-             'message' => $e->getMessage(),
-          ], 401);
-       }
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 401);
+        }
     }
 
     public function authLogout(Request $request)
     {
-         $logout = $this->rootAuthService->logout($request);
+        $logout = $this->rootAuthService->logout($request);
 
-         return $logout;
+        return $logout;
     }
 
     public function verifyMe(Request $request)
     {
-       $verify = $this->rootAuthService->verifyRoot($request);
+        $verify = $this->rootAuthService->verifyRoot($request);
 
-       return $verify;
+        return $verify;
     }
 }

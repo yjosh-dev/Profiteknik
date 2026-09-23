@@ -12,7 +12,7 @@ class RootAuthService
     public function attemptLogin(array $data)
     {
 
-        $key = 'login:' . $data['username'];
+        $key = 'login:'.$data['username'];
 
         if (RateLimiter::tooManyAttempts($key, $maxAttempts = 5)) {
             $seconds = RateLimiter::availableIn($key);
@@ -24,16 +24,13 @@ class RootAuthService
 
         $account = $this->usernameCheck($data['username']);
 
-
         $hashToCheck = $account->password ?? '$2y$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcKf7gp728F9E585V.46SjZJuWu';
 
-     
-        if (!$this->passwordCheck($data['password'], $hashToCheck) || !$account) 
-        {
+        if (! $this->passwordCheck($data['password'], $hashToCheck) || ! $account) {
             RateLimiter::increment($key, 60);
 
             throw new Exception(
-                "Invalid username or password! Please try again later."
+                'Invalid username or password! Please try again later.'
             );
         }
 
@@ -41,9 +38,9 @@ class RootAuthService
 
         RateLimiter::clear($key);
 
-        if (!$token) {
+        if (! $token) {
             throw new Exception(
-                "An error occurred while issuing tokens. Please try again."
+                'An error occurred while issuing tokens. Please try again.'
             );
         }
 
@@ -55,7 +52,7 @@ class RootAuthService
         $username = $data->user();
         $logout = $username->tokens()->delete();
 
-        if(!$logout){
+        if (! $logout) {
             throw new Exception('Error occured while logging out. Please try again later.');
         }
 
@@ -64,16 +61,16 @@ class RootAuthService
 
     public function verifyRoot($user)
     {
-       $user = $user->user();
-       $data = [
-          "id" => $user->id,
-          "first_name" => $user->first_name,
-          "middle_name" => $user->middle_name,
-          "last_name" => $user->last_name,
-          "role" => "root"
-       ];
+        $user = $user->user();
+        $data = [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'middle_name' => $user->middle_name,
+            'last_name' => $user->last_name,
+            'role' => 'root',
+        ];
 
-       return $data;
+        return $data;
     }
 
     private function usernameCheck($username)

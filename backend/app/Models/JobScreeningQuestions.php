@@ -4,11 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\JobListing;
 
 class JobScreeningQuestions extends Model
 {
-     /**
+    /**
      * The primary key associated with the table.
      */
     protected $primaryKey = 'question_id';
@@ -29,8 +28,8 @@ class JobScreeningQuestions extends Model
     /**
      * The job listing this screening question belongs to.
      */
-    function joblisting(): BelongsTo
+    public function joblisting(): BelongsTo
     {
-         return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
+        return $this->belongsTo(JobListing::class, 'job_id', 'job_id');
     }
 }

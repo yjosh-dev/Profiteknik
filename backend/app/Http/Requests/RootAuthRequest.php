@@ -24,7 +24,7 @@ class RootAuthRequest extends FormRequest
     {
         return [
             'username' => ['required', 'string'],
-            'password' => ['required', 'string']
+            'password' => ['required', 'string'],
         ];
     }
 }

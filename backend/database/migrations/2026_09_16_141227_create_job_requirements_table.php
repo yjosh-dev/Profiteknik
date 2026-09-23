@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-         Schema::create('job_requirements', function (Blueprint $table) {
+        Schema::create('job_requirements', function (Blueprint $table) {
             $table->foreignId('job_id')->constrained('job_listing', 'job_id')->onDelete('cascade')->primary();
             $table->enum('highest_education', ['High School', 'Vocational', 'Associate', 'Bachelor', 'Master', 'Doctorate'])->nullable();
             $table->unsignedInteger('experience')->nullable();

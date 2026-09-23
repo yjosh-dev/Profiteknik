@@ -5,30 +5,31 @@ namespace App\Services;
 use App\Models\RootAccount;
 use Exception;
 
-class RootAccountService {
-   
-     public function createRoot(array $data): RootAccount {
-        
-         $create = RootAccount::create($data);
+class RootAccountService
+{
+    public function createRoot(array $data): RootAccount
+    {
 
-         if (!$create) {
+        $create = RootAccount::create($data);
+
+        if (! $create) {
             throw new Exception('Failed to create account! Please try again.');
-         }
+        }
 
-         return $create;
-     }
+        return $create;
+    }
 
-     public function deleteRoot(int $data) {
+    public function deleteRoot(int $data)
+    {
 
         $delete = RootAccount::findOrFail($data);
-                            
+
         $delete->delete();
 
-         if (!$delete) {
+        if (! $delete) {
             throw new Exception('Failed to delete account! Please try again.');
-         }
+        }
 
-         return $delete;
-     }
+        return $delete;
+    }
 }
-
