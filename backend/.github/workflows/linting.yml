@@ -5,15 +5,10 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
-    
-  pull request:
-    branches: [main]
-    paths:
-     - 'backend/**'
-
+      
 jobs: 
   lint:
-    run-on: ubuntu-latest
+    runs-on: ubuntu-latest
     defaults:
         run:
           working-directory: backend
