@@ -5,6 +5,7 @@ use App\Http\Controllers\EmployeeAuthController;
 use App\Http\Controllers\Root\EmployeeAccountController;
 use App\Http\Controllers\RootAccountController;
 use App\Http\Controllers\RootAuthController;
+use App\Http\Controllers\Users\ApplicantJobListingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,10 @@ Route::prefix('/employee')->group(function () {
     });
 
     Route::apiResource('job_listings', JobListingController::class);
+});
+
+Route::prefix('/job_listing')->group(function () {
+    Route::get('', [ApplicantJobListingController::class, 'fetchJobListing']);
 });
 
 Route::apiResource('root', RootAccountController::class);
