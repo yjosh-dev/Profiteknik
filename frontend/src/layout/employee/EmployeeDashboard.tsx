@@ -40,7 +40,7 @@ export default function EmployeeDashboard() {
         <header className="w-[98%] h-[10%] ">
           <Header onLogout={() => handleLogout(localStorage.getItem('token'))} />
         </header>
-        <main className="w-[98%] h-[86%] ">
+        <main className="w-[98%] h-[86%] overflow-auto ">
           <Outlet />
         </main>
       </div>
