@@ -91,7 +91,7 @@ export default function ManageJobListing() {
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 p-6 bg-[#FAF9F6] min-h-screen select-none">
+    <div className="w-full h-full flex flex-col gap-6 p-6 bg-[#FAF9F6] min-h-screen select-none">
       {/* ================= TOP SECTION: STATS DASHBOARD ================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Total Jobs & Views */}
