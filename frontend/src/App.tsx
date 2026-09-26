@@ -19,6 +19,10 @@ import Dashboard from "./features/employee/Dashboard.tsx";
 import JobListingDetail from "./features/employee/JobListingDetail.tsx";
 import HomeLayout from "./layout/applicant/HomeLayout.tsx";
 import Home from "./page/Home.tsx";
+import JobListingWall from "./features/applicant/JobListingWall.tsx";
+import ApplicantLoginForm from "./components/common/ApplicantLoginForm.tsx";
+import ApplicantLogin from "./page/ApplicantLogin.tsx";
+import ApplicantSignin from "./page/ApplicantSignup.tsx";
 
 function App() {
   return (
@@ -49,7 +53,12 @@ function App() {
           {/* EMPLOYEE */}
           <Route path="/applicant" element={<HomeLayout />}>
             <Route path="" element={<Home />} />
+            <Route path="job_wall" element={<JobListingWall />} />
           </Route>
+          <Route path="/applicant/signup" element={<ApplicantLogin />} />
+
+          <Route path="/test" element={<ApplicantSignin />} />
+
         </Routes>
       </BrowserRouter>
     </ContextProvider>
