@@ -6,11 +6,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function RootHome() {
-  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const { checkAuth } = UseAuth();
 
   const handleRootLogin = async (email: string, password: string) => {
@@ -28,20 +27,21 @@ export default function RootHome() {
         setError(message);
       }
     } finally {
-      localStorage.setItem('verify_type', "root")
+      localStorage.setItem("verify_type", "root");
       checkAuth("root");
       setIsLoading(false);
     }
   };
 
   const handleContinue = () => {
-    setIsLoading(false)
-    navigate("/root/dash")
-  }
+    setIsLoading(false);
+    navigate("/root/dash");
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <LoginForm
+        type="root"
         onClose={() => setError(null)}
         success={success}
         handleContinue={handleContinue}

@@ -42,6 +42,7 @@ export default function EmployeeHome() {
   return (
     <div className="w-screen h-screen flex items-center justify-center">
       <LoginForm
+        type="employee"
         isLoading={loading}
         success={success}
         error={error}
