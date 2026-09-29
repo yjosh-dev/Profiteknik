@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
 
 export default function HomeLayout() {
@@ -15,7 +15,7 @@ export default function HomeLayout() {
 
 function Navbar() {
   const [activeTab, setActiveTab] = useState("Home");
-
+  const navigate = useNavigate();
   const navItems = [
     { title: "Home", path: "" },
     { title: "Jobs", path: "job_wall" },
@@ -70,7 +70,10 @@ function Navbar() {
                 className="w-full pl-9 pr-4 py-2 bg-transparent text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-red-500 rounded-full border border-zinc-200 focus:border-red-500 transition-all"
               />
             </div>
-            <button className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-15 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+            <button
+              className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-15 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+              onClick={() => navigate("/applicant/signin")}
+            >
               <span>Login</span>
             </button>
           </div>
