@@ -22,7 +22,7 @@ import Home from "./page/Home.tsx";
 import JobListingWall from "./features/applicant/JobListingWall.tsx";
 import ApplicantLoginForm from "./components/common/ApplicantLoginForm.tsx";
 import ApplicantLogin from "./page/ApplicantLogin.tsx";
-import ApplicantSignin from "./page/ApplicantSignup.tsx";
+import ApplicantSignup from "./page/ApplicantSignup.tsx";
 
 function App() {
   return (
@@ -55,9 +55,9 @@ function App() {
             <Route path="" element={<Home />} />
             <Route path="job_wall" element={<JobListingWall />} />
           </Route>
-          <Route path="/applicant/signup" element={<ApplicantLogin />} />
 
-          <Route path="/test" element={<ApplicantSignin />} />
+          <Route path="/applicant/signup" element={<ApplicantSignup />} />
+          <Route path="/applicant/signin" element={<ApplicantLogin />} />
 
         </Routes>
       </BrowserRouter>
