@@ -107,7 +107,7 @@ export default function ManageJobListing() {
             </div>
             <div className="mt-4 flex items-baseline justify-between">
               <div>
-                <p className="font-serif text-3xl font-medium text-[#1C2321]">
+                <p className="archivo text-3xl font-medium text-[#1C2321]">
                   {totalJobs}
                 </p>
                 <p className="archivo text-xs text-[#6B6F76] mt-0.5">
@@ -115,7 +115,7 @@ export default function ManageJobListing() {
                 </p>
               </div>
               <div className="text-right border-l border-[#E3E0D8] pl-4">
-                <p className="font-serif text-3xl font-medium text-[#1C2321] flex items-center gap-1">
+                <p className="archivo text-3xl font-medium text-[#1C2321] flex items-center gap-1">
                   1,656
                 </p>
                 <p className="archivo text-xs text-[#6B6F76] mt-0.5 flex items-center justify-end gap-1">
@@ -144,7 +144,7 @@ export default function ManageJobListing() {
                   Accepted
                 </span>
               </div>
-              <p className="font-serif text-xl font-medium text-[#1C2321]">
+              <p className="archivo text-xl font-medium text-[#1C2321]">
                 24
               </p>
             </div>
@@ -155,7 +155,7 @@ export default function ManageJobListing() {
                   Rejected
                 </span>
               </div>
-              <p className="font-serif text-xl font-medium text-[#1C2321]">
+              <p className="archivo text-xl font-medium text-[#1C2321]">
                 41
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function ManageJobListing() {
                   Waitlisted
                 </span>
               </div>
-              <p className="font-serif text-xl font-medium text-[#1C2321]">
+              <p className="archivo text-xl font-medium text-[#1C2321]">
                 16
               </p>
             </div>
@@ -187,7 +187,7 @@ export default function ManageJobListing() {
           <div className="grid grid-cols-2 gap-4 mt-3">
             <div>
               <p className="archivo text-xs text-[#6B6F76]">Conversion Rate</p>
-              <p className="font-serif text-2xl font-medium text-[#1C2321] mt-0.5">
+              <p className="archivo text-2xl font-medium text-[#1C2321] mt-0.5">
                 6.7%
               </p>
               <p className="archivo text-[10px] text-[#6B6F76]">
@@ -198,7 +198,7 @@ export default function ManageJobListing() {
               <p className="archivo text-xs text-[#6B6F76]">
                 Avg. Time to Fill
               </p>
-              <p className="font-serif text-2xl font-medium text-[#1C2321] mt-0.5">
+              <p className="archivo text-2xl font-medium text-[#1C2321] mt-0.5">
                 18 Days
               </p>
               <p className="archivo text-[10px] text-[#6B6F76]">
@@ -214,7 +214,7 @@ export default function ManageJobListing() {
         {/* Table Controls / Filter Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
-            <h2 className="font-serif text-xl font-medium text-[#1C2321]">
+            <h2 className="archivo text-xl font-medium text-[#1C2321]">
               Job Listings
             </h2>
             <p className="archivo text-xs text-[#6B6F76] mt-0.5">
@@ -289,7 +289,7 @@ export default function ManageJobListing() {
                   >
                     {/* Title */}
                     <td className="px-4 py-3.5">
-                      <p className="font-serif text-sm font-medium text-[#1C2321] group-hover:underline cursor-pointer">
+                      <p className="archivo text-sm font-medium text-[#1C2321] group-hover:underline cursor-pointer">
                         {job.job_title}
                       </p>
                     </td>
