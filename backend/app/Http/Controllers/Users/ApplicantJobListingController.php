@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Users;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Services\Users\JobListingService;
+use Illuminate\Http\Request;
 
 class ApplicantJobListingController extends Controller
 {
