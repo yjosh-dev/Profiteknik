@@ -9,5 +9,5 @@ export const OTPService = {
         axiosClient.post('/otp/verify', {email, otp}),
 
      createAccount: async(username: string, password: string) =>
-        axiosClient.post('/create_account', {username, password})
+        axiosClient.post('/applicant/create_account', {username, password})
 }
