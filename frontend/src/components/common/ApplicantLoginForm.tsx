@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -13,15 +14,7 @@ import { RiLockPasswordFill } from "react-icons/ri";
 import StatusModal from "../ui/StatusModal";
 import { validatePasswordInput } from "../../utils/AuthInputValidation";
 import { useNavigate } from "react-router-dom";
-
-type ApplicantLoginFormType = {
-  isLoading: boolean;
-  success: boolean;
-  error: boolean | null | string;
-  onClick: (email: string, password: string) => void;
-  handleContinue: () => void;
-  onClose: () => void;
-};
+import { ApplicantAuth } from "../../service/api/auth/applicantAuth";
 
 type InputProps = {
   id: string;
@@ -86,32 +79,54 @@ function Input({
   );
 }
 
-export default function ApplicantLoginForm({
-  isLoading,
-  success,
-  error,
-  onClick,
-  handleContinue,
-  onClose,
-}: ApplicantLoginFormType) {
+export default function ApplicantLoginForm() {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const passwordValid = validatePasswordInput(formData.password);
-  const showPasswordError = touched && formData.password.length > 0 && !passwordValid;
-  const canSubmit = formData.username.trim() !== "" && passwordValid;
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  const passwordValid = validatePasswordInput(formData.password);
+  const showPasswordError =
+    touched && formData.password.length > 0 && !passwordValid;
+  const canSubmit = formData.username.trim() !== "" && passwordValid;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setTouched(true);
-    if (canSubmit) onClick(formData.username, formData.password);
+    if (!canSubmit || isLoading) return;
+
+    try {
+      setIsLoading(true);
+      const result = await ApplicantAuth.login(formData);
+      localStorage.setItem("token", result.data.token);
+      localStorage.setItem("verify_type", "applicant");
+      setSuccess(true);
+    } catch (err) {
+      const fallback = "Something went wrong. Please try again.";
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message ?? fallback);
+      } else {
+        setError(fallback);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleContinue = () => {
+    setSuccess(false);
+    navigate(-1);
+  };
+
+  const handleCloseError = () => setError(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSubmit();
@@ -151,7 +166,11 @@ export default function ApplicantLoginForm({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Enter your account password"
-          error={showPasswordError ? "Password must be 4 characters or above" : undefined}
+          error={
+            showPasswordError
+              ? "Password must be 4 characters or above"
+              : undefined
+          }
           rightElement={
             <button
               type="button"
@@ -192,7 +211,10 @@ export default function ApplicantLoginForm({
 
       <p className="archivo text-sm text-zinc-500 mt-4">
         Don't have an account?{" "}
-        <span className="text-red-500 hover:text-red-700 transition-colors cursor-pointer font-medium" onClick={() => navigate('/applicant/signup')}>
+        <span
+          className="text-red-500 hover:text-red-700 transition-colors cursor-pointer font-medium"
+          onClick={() => navigate("/applicant/signup")}
+        >
           Sign up
         </span>
       </p>
@@ -214,9 +236,9 @@ export default function ApplicantLoginForm({
         <div className="w-screen h-screen flex items-center justify-center fixed inset-0 z-99 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
           <StatusModal
             icon={<MdError size={54} color="#a61124" />}
-            onClick={onClose}
+            onClick={handleCloseError}
             heading="Login failed"
-            description={error.toString()}
+            description={error}
             button_name="Close"
             button_color="bg-[#a61124]"
           />
