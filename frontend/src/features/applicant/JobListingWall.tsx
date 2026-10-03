@@ -1,6 +1,6 @@
-import ContentContainer from "../../components/ui/ContentContainer";
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   FaLocationDot,
@@ -12,72 +12,112 @@ import { RiSearchAiLine } from "react-icons/ri";
 import { jobListingService } from "../../service/api/applicants/jobListingService";
 import type { PaginatedJobs } from "../../types/JobListingTypes";
 
+import JobDetailPanel from "../../components/common/JobDetail";
+import JobDetailSkeleton from "../../components/common/JobDetailSkeleton";
+import axios from "axios";
+import type { JobDetail } from "../../types/JobDetailType";
+
 export default function JobListingWall() {
-  type jobDataType = {
-    jobData: string[];
-    currentPage: number;
-    lastPage: number;
-    totalListing: number;
-  };
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedJobId = searchParams.get("job");
+
   const [jobData, setJobData] = useState<PaginatedJobs | null>(null);
-  const [nextPage, setNextPage] = useState();
+  const [jobDetail, setJobDetail] = useState<JobDetail | null>(null);
+  const [nextPage, setNextPage] = useState<number>(2);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState(false);
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
+  };
+
+  const handleSelectJob = (id: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("job", id);
+        return next;
+      },
+      { preventScrollReset: true },
+    );
   };
 
   const fetchJobListingInitial = async () => {
     try {
       setLoading(true);
-      const jobData = await jobListingService.fetchJobListing();
-      setNextPage(jobData.data.current_page + 1);
-      setJobData(jobData.data);
-      console.log(jobData.data);
+      const res = await jobListingService.fetchJobListings();
+      setNextPage(res.data.current_page + 1);
+      setJobData(res.data);
     } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchJobListing = async () => {
-    try {
-      return await jobListingService.fetchJobListing(nextPage);
-    } catch (err) {
-    } finally {
-    }
-  };
-
+  // Load the job list once on mount
   useEffect(() => {
     fetchJobListingInitial();
   }, []);
 
-  const handleScroll = async (e: any) => {
-    if (
-      e.target.scrollTop + e.target.clientHeight >=
-      e.target.scrollHeight - 1
-    ) {
+  // Load the job detail whenever the selected job (?job=) changes
+  useEffect(() => {
+    if (!selectedJobId) {
+      setJobDetail(null);
+      return;
+    }
 
-      if (jobData?.current_page == jobData?.last_page) {
-        alert("last_page");
-        return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setLoadingDetail(true);
+        setDetailError(false);
+        const res = await axios.get(
+          `http://localhost:8000/api/job_listing/${selectedJobId}`,
+        );
+        if (!cancelled) setJobDetail(res.data);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setDetailError(true);
+      } finally {
+        if (!cancelled) setLoadingDetail(false);
       }
- 
-      const fetchListingData = await fetchJobListing();
-      const fetchedData = fetchListingData?.data
-      const previousData = jobData?.data
-      const mergedDataList = [
-         ...(previousData ?? []),
-         ...fetchedData.data
-      ]
+    })();
 
-      console.log(fetchedData)
-      setJobData({
-         ...fetchedData,
-         data: mergedDataList
-      })
-    } 
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedJobId]);
+
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+
+    if (!atBottom || loadingMore || !jobData) return;
+    if (jobData.current_page >= jobData.last_page) return;
+
+    try {
+      setLoadingMore(true);
+      const res = await jobListingService.fetchJobListings(nextPage);
+      const fetched = res.data;
+
+      setJobData((prev) => ({
+        ...fetched,
+        data: [...(prev?.data ?? []), ...fetched.data],
+      }));
+      setNextPage(fetched.current_page + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
   };
+
+  const hasNoJobs = !loading && jobData && jobData.data.length === 0;
 
   return (
     <div className="w-full h-full flex justify-center px-10 py-6 bg-zinc-50 gap-5">
@@ -105,6 +145,7 @@ export default function JobListingWall() {
         onScroll={handleScroll}
       >
         <JobSearchBar search={search} onChange={handleSearch} />
+
         {loading && (
           <>
             <JobCardSkeleton />
@@ -112,23 +153,44 @@ export default function JobListingWall() {
             <JobCardSkeleton />
           </>
         )}
-        {jobData?.data &&
-          jobData.data.map((item, key) => (
-            <JobCard
-              job_id={item.job_id}
-              job_title={item.job_title}
-              location="Pasig City"
-              job_description={item.job_description}
-              job_type={item.employment_type}
-              experience_required="12"
-              min_salary={item.minimum_salary}
-              max_salary={item.maximum_salary}
-            />
-          ))}
+
+        {hasNoJobs && <NoJobsFound />}
+
+        {jobData?.data.map((item) => (
+          <JobCard
+            key={item.job_id}
+            job_id={String(item.job_id)}
+            selected={String(item.job_id) === selectedJobId}
+            onSelect={handleSelectJob}
+            job_title={item.job_title}
+            location="Pasig City"
+            job_description={item.job_description}
+            job_type={item.employment_type}
+            experience_required="12"
+            min_salary={item.minimum_salary}
+            max_salary={item.maximum_salary}
+          />
+        ))}
+
+        {loadingMore && <JobCardSkeleton />}
       </div>
 
       {/* LISTING INFORMATION */}
-      <div className="w-[35%] h-full bg-white border border-gray-200 rounded-xl shadow-sm"></div>
+      <div className="w-[35%] max-h-full bg-white border border-gray-200 rounded-xl shadow-sm">
+        {loadingDetail ? (
+          <JobCardSkeleton/>
+        ) : jobDetail ? (
+          <JobDetailPanel job={jobDetail} />
+        ) : (
+          <div className="h-full flex items-center justify-center px-10 text-center">
+            <p className="archivo text-sm text-zinc-500">
+              {detailError
+                ? "We couldn't load this job. Try selecting it again."
+                : "Select a job to see its details."}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -188,11 +250,11 @@ function JobLocationFilter() {
 
 function JobExperienceFilter() {
   const yearExperience = [
-    { name: "0 yr", id: "0" },
-    { name: "1-2 yrs", id: "1-2" },
-    { name: "3-5 yrs", id: "3-5" },
-    { name: "5-7 yrs", id: "5-7" },
-    { name: "8+", id: "8+" },
+    { name: "0 yr", id: "exp-0" },
+    { name: "1-2 yrs", id: "exp-1-2" },
+    { name: "3-5 yrs", id: "exp-3-5" },
+    { name: "5-7 yrs", id: "exp-5-7" },
+    { name: "8+", id: "exp-8+" },
   ];
 
   return (
@@ -204,7 +266,7 @@ function JobExperienceFilter() {
             <input
               type="checkbox"
               id={item.id}
-              name="jobType"
+              name="experience"
               value={item.name}
               className="w-4 h-4 rounded border-gray-300 text-red-800 focus:ring-red-500 focus:ring-offset-0 cursor-pointer accent-red-800"
             />
@@ -249,6 +311,8 @@ function JobSalaryFilter() {
 
 function JobCard({
   job_id,
+  selected = false,
+  onSelect,
   job_title,
   location,
   job_description,
@@ -258,6 +322,8 @@ function JobCard({
   max_salary,
 }: {
   job_id: string;
+  selected?: boolean;
+  onSelect: (id: string) => void;
   job_title: string;
   location: string;
   job_description: string;
@@ -268,11 +334,25 @@ function JobCard({
 }) {
   const salaryRange = `${min_salary} - ${max_salary}`;
   const experience = `${experience_required}+ years`;
+
   return (
     <div
-      className="w-full rounded-md border border-gray-200 shadow-sm py-5 flex flex-col items-center cursor-pointer transition-all duration-200 hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5"
-      id={job_id}
-      onClick={() => alert(job_id)}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      id={`job-${job_id}`}
+      onClick={() => onSelect(job_id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(job_id);
+        }
+      }}
+      className={`w-full rounded-md border shadow-sm py-5 flex flex-col items-center cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+        selected
+          ? "border-red-700 ring-1 ring-red-700"
+          : "border-gray-200 hover:border-gray-300"
+      }`}
     >
       <div className="w-full flex justify-between px-5 gap-4 mb-3">
         <div className="flex gap-2 h-auto">
@@ -412,7 +492,7 @@ function JobSearchBar({
       </div>
       {search && (
         <span className="flex archivo text-sm text-zinc-400 gap-1 mt-4 ml-1">
-          <p>Showing</p> <p>{results?.toString()}</p> <p>total jobs for</p>{" "}
+          <p>Showing</p> <p>{results ?? 12} total jobs for</p>{" "}
           <p className="font-semibold text-gray-600">{search}</p>
         </span>
       )}
