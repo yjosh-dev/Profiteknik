@@ -51,6 +51,8 @@ type Job = {
   updated_at: string;      // ISO date string
 };
 
+
+
 export type PaginatedJobs = {
   current_page: number;
   data: Job[];
