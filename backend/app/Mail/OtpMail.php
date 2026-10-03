@@ -15,7 +15,7 @@ class OtpMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public string $otp,
-        public int $expiresInMinutes = 5,
+        public int $expiresInMinutes,
         public string $userName
     ) {}
 
@@ -31,9 +31,9 @@ class OtpMail extends Mailable implements ShouldQueue
         return new Content(
             view: 'emails.otp',
             with: [
-                'otp'              => $this->otp,
+                'otp' => $this->otp,
                 'expiresInMinutes' => $this->expiresInMinutes,
-                'userName'         => $this->userName
+                'userName' => $this->userName,
             ],
         );
     }
