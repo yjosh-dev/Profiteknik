@@ -12,8 +12,13 @@ class ApplicantJobListingController extends Controller
         protected JobListingService $JobListingService
     ) {}
 
-    public function fetchJobListing(Request $request)
+    public function fetchJobListings(Request $request)
     {
-        return $this->JobListingService->fetchJobListing();
+        return $this->JobListingService->fetchJobListings();
+    }
+
+    public function fetchJobListing(string $job_id)
+    {
+        return $this->JobListingService->fetchJobListing($job_id);
     }
 }
