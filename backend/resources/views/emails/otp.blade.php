@@ -31,7 +31,7 @@
                                             <div style="width:40px; height:40px; border:1px solid #e4e4e7; border-radius:8px;
                                                 display:flex; align-items:center; justify-content:center;
                                                 font-size:18px; font-weight:bold; color:#b91c1c; background-color:#fef2f2;
-                                                line-height:40px; text-align:center;">
+                                                line-height:40px; text-align:center; padding-left:5px;">
                                                 {{ $digit }} 
                                             </div>
                                         </td>
