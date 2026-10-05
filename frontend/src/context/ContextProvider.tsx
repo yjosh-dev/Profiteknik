@@ -6,6 +6,8 @@ type ContextProviderProps = {
 
 export default function ContextProvider({ children }: ContextProviderProps) {
   return (
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        {children}
+      </AuthProvider>
   );
 }

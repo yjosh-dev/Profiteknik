@@ -72,7 +72,6 @@ export default function JobListing() {
     }));
   };
 
-  // Dynamic Screening Questions Handlers
   const handleQuestionChange = (index: number, value: string) => {
     const updatedQuestions = [...formData.screening_questions];
     updatedQuestions[index].screening_question = value;
@@ -171,7 +170,7 @@ export default function JobListing() {
   };
 
   return (
-    <ContentContainer className="flex bg-white">
+    <ContentContainer className="flex bg-white ">
       {RenderSteps()}
       {success && (
         <div className="absolute w-[82%] h-[83%] flex items-center justify-center bg-black/50 rounded-md backdrop-blur-sm">
