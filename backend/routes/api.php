@@ -1,19 +1,17 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\RootAccountController;
-use App\Http\Controllers\RootAuthController;
-use App\Http\Controllers\EmployeeAuthController;
-use App\Http\Controllers\OTPController;
 use App\Http\Controllers\ApplicantAuthController;
 use App\Http\Controllers\Employee\JobListingController;
-
+use App\Http\Controllers\EmployeeAuthController;
+use App\Http\Controllers\OTPController;
 use App\Http\Controllers\Root\EmployeeAccountController;
-
-use App\Http\Controllers\Users\ApplicantJobListingController;
+use App\Http\Controllers\RootAccountController;
+use App\Http\Controllers\RootAuthController;
 use App\Http\Controllers\Users\ApplicantController;
+use App\Http\Controllers\Users\ApplicantDataController;
+use App\Http\Controllers\Users\ApplicantJobListingController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -34,10 +32,9 @@ Route::prefix('/root')->group(function () {
     Route::apiResource('employees', EmployeeAccountController::class);
 });
 
-
 //  --------- E M P L O Y E E S  -----------
 Route::prefix('/employee')->group(function () {
-     // auth related
+    // auth related
     Route::prefix('/auth')->controller(EmployeeAuthController::class)->group(function () {
         Route::post('/logout', 'authLogout')->middleware('auth:sanctum');
         Route::post('/login', 'authLogin');
@@ -56,13 +53,22 @@ Route::prefix('/applicant')->group(function () {
         Route::get('/test', 'test');
     });
 
+    Route::controller(ApplicantDataController::class)
+        ->middleware('auth:sanctum')
+        ->group(function () {
+            Route::post('/info', 'storeApplicantInformation');
+            Route::post('/contact', 'storeApplicantContact');
+            Route::post('/experience', 'storeApplicantExperience');
+            Route::post('/skills', 'storeApplicantSkills');
+            Route::get('/profile', 'fetchApplicantProfile');
+        });
 
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {
-       Route::post('/login', [ApplicantAuthController::class, 'login']);
-       Route::get('/verify', [ApplicantAuthController::class, 'verify'])->middleware('auth:sanctum');
-       Route::post('/logout', [ApplicantAuthController::class, 'logout']);
+        Route::post('/login', [ApplicantAuthController::class, 'login']);
+        Route::get('/verify', [ApplicantAuthController::class, 'verify'])->middleware('auth:sanctum');
+        Route::post('/logout', [ApplicantAuthController::class, 'logout']);
     });
-  
+
 });
 
 Route::prefix('otp')->controller(OTPController::class)->group(function () {
