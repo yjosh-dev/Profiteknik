@@ -55,6 +55,7 @@ class ApplicantAuthService
             'middle_name' => $info->middle_name,
             'last_name' => $info->last_name,
             'profile_image' => $info->profile_image,
+            'isNew' => $user->isNew,
             'role' => 'applicant',
         ];
 

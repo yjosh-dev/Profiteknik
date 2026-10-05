@@ -2,11 +2,10 @@
 
 namespace App\Services\Users;
 
-use Illuminate\Support\Facades\DB;
-
 use App\Models\ApplicantAccount;
-use App\Models\ApplicantInformation;
 use App\Models\ApplicantContact;
+use App\Models\ApplicantInformation;
+use Illuminate\Support\Facades\DB;
 
 class ApplicantService
 {

@@ -47,7 +47,7 @@ class ApplicantAuthController extends Controller
             $username = $this->authService->logout($request);
 
             return response()->json([
-                'message' => "Logged out successfully.",
+                'message' => 'Logged out successfully.',
                 'username' => $username,
             ]);
         } catch (Exception $e) {

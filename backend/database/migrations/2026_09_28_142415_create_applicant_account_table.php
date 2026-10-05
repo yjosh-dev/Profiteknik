@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('applicant_account', function (Blueprint $table) {
             $table->increments('applicant_id');
             $table->string('username')->unique();
-            $table->char('password', 60); 
-            $table->timestamps();       
+            $table->char('password', 60);
+            $table->timestamps();
             $table->dateTime('last_login')->nullable();
             $table->boolean('isNew')->default(true);
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
