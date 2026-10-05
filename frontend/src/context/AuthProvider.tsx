@@ -1,9 +1,16 @@
 import { createContext, useEffect, useState } from "react";
 import { rootAuth } from "../service/api/auth/rootAuth";
 import { employeeAuth } from "../service/api/auth/employeeAuth";
+import { ApplicantAuth } from "../service/api/auth/applicantAuth";
 
 type UserType = {
-  userData: { name: string; role: string; id: string, profile_image?: string };
+  userData: {
+    name: string;
+    role: string;
+    id: string;
+    profile_image?: string;
+    isNew?: boolean;
+  };
 } | null;
 
 type AuthContextType = {
@@ -47,20 +54,39 @@ export default function AuthProvider({
     }
   };
 
-  {/* TO FIX WHEN RELOADING IT DEFAULTS TO CALLING VERIFYROOT
-    POSSIBLE FIX: USE MEMORY TO CHECK THE DEFAULT TO THE LAST VERIFYTYPE */}
-
   const verifyEmployee = async (token: string) => {
     try {
-       const verify = await employeeAuth.verifyEmployee(token);
-       setUserData({
+      const verify = await employeeAuth.verifyEmployee(token);
+      setUserData({
         userData: {
-           name: `${verify.data.first_name} ${verify.data.last_name}`,
-           id: verify.data.id,
-           role: verify.data.role,
-            profile_image: verify.data.profile_image
-         },
-       });
+          name: `${verify.data.first_name} ${verify.data.last_name}`,
+          id: verify.data.id,
+          role: verify.data.role,
+          profile_image: verify.data.profile_image,
+        },
+      });
+      setUnauthenticated(false);
+    } catch (error) {
+      console.error("Token verification failed:", error);
+      localStorage.removeItem("token");
+      setUnauthenticated(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyApplicant = async (token: string) => {
+    try {
+      const verify = await ApplicantAuth.me(token);
+      setUserData({
+        userData: {
+          name: `${verify.data.first_name} ${verify.data.last_name}`,
+          id: verify.data.id,
+          role: verify.data.role ?? "applicant",
+          isNew: verify.data.isNew,
+          profile_image: verify.data.profile_image,
+        },
+      });
       setUnauthenticated(false);
     } catch (error) {
       console.error("Token verification failed:", error);
@@ -81,11 +107,15 @@ export default function AuthProvider({
 
     switch (verifyType) {
       case "root":
-        verifyRoot(token)
+        verifyRoot(token);
         break;
 
       case "employee":
-        verifyEmployee(token)
+        verifyEmployee(token);
+        break;
+
+      case "applicant":
+        verifyApplicant(token);
         break;
 
       default:
@@ -95,7 +125,7 @@ export default function AuthProvider({
   };
 
   useEffect(() => {
-    const verifyType = localStorage.getItem('verify_type')
+    const verifyType = localStorage.getItem("verify_type");
     checkAuth(verifyType ? verifyType : "root"); // pass whichever verifyType makes sense on initial load
   }, []);
 

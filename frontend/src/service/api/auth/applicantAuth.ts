@@ -1,3 +1,4 @@
+import Header from "../../../components/common/Header";
 import axiosClient from "../axiosClient";
 
 type LoginPayload = {
@@ -14,7 +15,9 @@ export const ApplicantAuth = {
     return axiosClient.post("applicant/authlogout");
   },
 
-  me: () => {
-    return axiosClient.get("/applicant/auth/me");
-  },
+
+  me: async (token: string) =>
+    axiosClient.get("/applicant/auth/verify", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 };
