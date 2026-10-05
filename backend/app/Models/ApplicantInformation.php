@@ -21,6 +21,7 @@ class ApplicantInformation extends Model
         'middle_name',
         'last_name',
         'suffix',
+        'applicant_profile_picture',
         'building_no',
         'house_no',
         'street',

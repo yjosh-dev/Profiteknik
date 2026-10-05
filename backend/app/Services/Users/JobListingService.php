@@ -12,12 +12,12 @@ class JobListingService
     }
 
     public function fetchJobListing(string $job_id)
-    { 
+    {
         $listing = JobListing::with([
             'requirements',
             'screeningQuestions',
         ])
-        ->findOrFail($job_id); 
+            ->findOrFail($job_id);
 
         return response()->json($listing);
     }

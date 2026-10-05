@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('last_name')->nullable();
             $table->enum('suffix', ['Jr.', 'Sr.', 'II', 'III', 'IV'])->nullable();
 
+            $table->string('applicant_profile_picture')->default('default.png')->nullable();
+
             $table->string('building_no')->nullable();
             $table->string('house_no')->nullable();
             $table->string('street')->nullable();
