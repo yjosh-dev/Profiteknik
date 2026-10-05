@@ -10,7 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 class ApplicantAccount extends Authenticatable
 {
     use HasApiTokens;
-    
+
     protected $table = 'applicant_account';
 
     protected $primaryKey = 'applicant_id';
@@ -18,6 +18,7 @@ class ApplicantAccount extends Authenticatable
     protected $fillable = [
         'username',
         'password',
+        'isNew',
         'last_login',
         'status',
     ];
@@ -25,7 +26,7 @@ class ApplicantAccount extends Authenticatable
     protected $hidden = ['password'];
 
     protected $casts = [
-        'password' => 'hashed', 
+        'password' => 'hashed',
         'last_login' => 'datetime',
     ];
 
