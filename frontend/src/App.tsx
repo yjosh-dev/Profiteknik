@@ -20,9 +20,13 @@ import JobListingDetail from "./features/employee/JobListingDetail.tsx";
 import HomeLayout from "./layout/applicant/HomeLayout.tsx";
 import Home from "./page/Home.tsx";
 import JobListingWall from "./features/applicant/JobListingWall.tsx";
-import ApplicantLoginForm from "./components/common/ApplicantLoginForm.tsx";
+
 import ApplicantLogin from "./page/ApplicantLogin.tsx";
 import ApplicantSignup from "./page/ApplicantSignup.tsx";
+import NewAccountGuard from "./layout/NewAccountGuard.tsx";
+import ApplicantProfile from "./features/applicant/ApplicantProfile.tsx";
+
+import CompleteAccountInformation from "./features/applicant/CompleteAccountInformation.tsx";
 
 function App() {
   return (
@@ -54,11 +58,20 @@ function App() {
           <Route path="/applicant" element={<HomeLayout />}>
             <Route path="" element={<Home />} />
             <Route path="job_wall" element={<JobListingWall />} />
+
+            <Route element={<NewAccountGuard/>}>
+             <Route path="profile" element={<ApplicantProfile/>}/>
+            </Route>
           </Route>
 
           <Route path="/applicant/signup" element={<ApplicantSignup />} />
           <Route path="/applicant/signin" element={<ApplicantLogin />} />
 
+        
+
+          // note guard with protected routing
+          <Route path="/applicant/complete-account-info" element={<CompleteAccountInformation/>}/> 
+    
         </Routes>
       </BrowserRouter>
     </ContextProvider>
