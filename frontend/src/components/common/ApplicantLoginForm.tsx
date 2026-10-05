@@ -15,6 +15,7 @@ import StatusModal from "../ui/StatusModal";
 import { validatePasswordInput } from "../../utils/AuthInputValidation";
 import { useNavigate } from "react-router-dom";
 import { ApplicantAuth } from "../../service/api/auth/applicantAuth";
+import { UseAuth } from "../../hooks/useAuth";
 
 type InputProps = {
   id: string;
@@ -88,6 +89,8 @@ export default function ApplicantLoginForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const {checkAuth} = UseAuth();
+
   const navigate = useNavigate();
 
   const passwordValid = validatePasswordInput(formData.password);
@@ -109,6 +112,8 @@ export default function ApplicantLoginForm() {
       localStorage.setItem("token", result.data.token);
       localStorage.setItem("verify_type", "applicant");
       setSuccess(true);
+      checkAuth("applicant");
+      navigate("/applicant/profile")
     } catch (err) {
       const fallback = "Something went wrong. Please try again.";
       if (axios.isAxiosError(err)) {
