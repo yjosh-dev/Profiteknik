@@ -117,6 +117,7 @@ export default function ApplicantSignup() {
   const handleCreateAccount = async () => {
     try {
       const create = await OTPService.createAccount(email, password.password1);
+      sessionStorage.removeItem("step");
       alert("account created");
       navigate("/applicant/signin");
     } catch (err) {
