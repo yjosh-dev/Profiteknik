@@ -35,7 +35,6 @@ function App() {
         <Routes>
           <Route path="/root" element={<RootHome />} />
           <Route path="/employee" element={<EmployeeHome />} />
-
           {/* ROOT */}
           <Route element={<ProtectedRoute path="/root" />}>
             <Route path="/root/dash" element={<RootDashboard />}>
@@ -43,7 +42,6 @@ function App() {
               <Route path="register_employee" element={<RegisterEmployee />} />
             </Route>
           </Route>
-
           {/* EMPLOYEE */}
           <Route element={<ProtectedRoute path="/employee" />}>
             <Route path="/employee/dash" element={<EmployeeDashboard />}>
@@ -53,25 +51,25 @@ function App() {
               <Route path="job_listing" element={<JobListingDetail />} />
             </Route>
           </Route>
-
+          
           {/* EMPLOYEE */}
-          <Route path="/applicant" element={<HomeLayout />}>
+          <Route path="/applicant" element={<HomeLayout />} >
             <Route path="" element={<Home />} />
             <Route path="job_wall" element={<JobListingWall />} />
 
-            <Route element={<NewAccountGuard/>}>
-             <Route path="profile" element={<ApplicantProfile/>}/>
+            <Route element={<ProtectedRoute path="/applicant/signin" />}>
+              <Route element={<NewAccountGuard />}>
+                <Route path="profile" element={<ApplicantProfile />} />
+              </Route>
             </Route>
+            <Route
+              path="/applicant/complete-account-info"
+              element={<CompleteAccountInformation />}
+            />
           </Route>
-
           <Route path="/applicant/signup" element={<ApplicantSignup />} />
           <Route path="/applicant/signin" element={<ApplicantLogin />} />
-
-        
-
-          // note guard with protected routing
-          <Route path="/applicant/complete-account-info" element={<CompleteAccountInformation/>}/> 
-    
+      
         </Routes>
       </BrowserRouter>
     </ContextProvider>
