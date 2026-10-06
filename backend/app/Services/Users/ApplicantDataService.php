@@ -4,6 +4,7 @@ namespace App\Services\Users;
 
 use App\Models\ApplicantContact;
 use App\Models\ApplicantInformation;
+use App\Models\ApplicantAccount;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -39,7 +40,7 @@ class ApplicantDataService
         ]);
 
         $information = ApplicantInformation::findOrFail($id);
-
+        $account = ApplicantAccount::findOrFail($id);
         // The uploaded file can't go into update(), so strip it from the data
         $data = Arr::except($validated, ['profile_image']);
 
@@ -54,6 +55,7 @@ class ApplicantDataService
 
         try {
             $information->update($data);
+            $account->update(['isNew' => false]);
         } catch (\Throwable $e) {
             if ($newImage) {
                 Storage::disk('public')->delete($newImage);
