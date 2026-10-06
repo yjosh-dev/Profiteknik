@@ -201,7 +201,7 @@ export default function CompleteAccountInformation() {
 
     // Refresh the logged-in user (isNew, profile picture), then move on
     await auth?.checkAuth("applicant");
-    navigate(NEXT_STEP_PATH);
+    navigate('/applicant/profile');
   };
 
   return (
