@@ -1,6 +1,8 @@
-import type { ProfileForm } from "../../../features/applicant/CompleteAccountInformation";
-import type { ContactForm } from "../../../features/applicant/CompleteAccountContact";
 import axiosClient from "../axiosClient";
+import type {
+  ContactForm,
+  ProfileForm,
+} from "../../../types/ApplicantProfileTypes";
 
 const authHeaders = (token: string) => ({
   headers: { Authorization: `Bearer ${token}` },
@@ -34,7 +36,7 @@ export const applicantProfileService = {
   }) => axiosClient.post("/applicant/contact", data, authHeaders(token)),
 
   // Step 3 (last): work history. Also marks the account as no longer new. to be created
- 
+
   // Profile page, Skills tab: replaces the whole list
   storeApplicantSkills: async ({
     token,
