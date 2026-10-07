@@ -54,4 +54,9 @@ class JobListing extends Model
     {
         return $this->hasMany(JobScreeningQuestions::class, 'job_id', 'job_id');
     }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(ApplicantJobApplications::class, 'job_id', 'job_id');
+    }
 }
