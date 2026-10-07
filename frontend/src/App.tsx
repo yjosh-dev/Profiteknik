@@ -27,6 +27,8 @@ import NewAccountGuard from "./layout/NewAccountGuard.tsx";
 import ApplicantProfile from "./features/applicant/ApplicantProfile.tsx";
 
 import CompleteAccountInformation from "./features/applicant/CompleteAccountInformation.tsx";
+import SuccessfulApplication from "./components/common/SuccessfulApplication.tsx";
+import Apply from "./features/applicant/Apply.tsx";
 
 function App() {
   return (
@@ -51,9 +53,9 @@ function App() {
               <Route path="job_listing" element={<JobListingDetail />} />
             </Route>
           </Route>
-          
+
           {/* EMPLOYEE */}
-          <Route path="/applicant" element={<HomeLayout />} >
+          <Route path="/applicant" element={<HomeLayout />}>
             <Route path="" element={<Home />} />
             <Route path="job_wall" element={<JobListingWall />} />
 
@@ -67,9 +69,17 @@ function App() {
               element={<CompleteAccountInformation />}
             />
           </Route>
+          
+          <Route element={<ProtectedRoute path="/applicant/signin" />}>
+            <Route element={<NewAccountGuard />}>
+              <Route path="/applicant/:job_id/apply" element={<Apply />} />
+            </Route>
+          </Route>
+
           <Route path="/applicant/signup" element={<ApplicantSignup />} />
           <Route path="/applicant/signin" element={<ApplicantLogin />} />
-      
+
+          <Route path="test" element={<Apply />} />
         </Routes>
       </BrowserRouter>
     </ContextProvider>
