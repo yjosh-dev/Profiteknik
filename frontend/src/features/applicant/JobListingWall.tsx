@@ -1,6 +1,6 @@
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   FaLocationDot,
@@ -28,6 +28,8 @@ export default function JobListingWall() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const navigate = useNavigate();
+
   const [detailError, setDetailError] = useState(false);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,9 +78,7 @@ export default function JobListingWall() {
       try {
         setLoadingDetail(true);
         setDetailError(false);
-        const res = await axios.get(
-          `http://localhost:8000/api/job_listing/${selectedJobId}`,
-        );
+        const res = await jobListingService.fetchJobListing(selectedJobId)
         if (!cancelled) setJobDetail(res.data);
       } catch (err) {
         console.error(err);
@@ -180,7 +180,7 @@ export default function JobListingWall() {
         {loadingDetail ? (
           <JobCardSkeleton/>
         ) : jobDetail ? (
-          <JobDetailPanel job={jobDetail} />
+          <JobDetailPanel job={jobDetail} onApply={() => navigate(`/applicant/${selectedJobId}/apply`)} />
         ) : (
           <div className="h-full flex items-center justify-center px-10 text-center">
             <p className="archivo text-sm text-zinc-500">
