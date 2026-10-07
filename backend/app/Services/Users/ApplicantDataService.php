@@ -2,9 +2,9 @@
 
 namespace App\Services\Users;
 
+use App\Models\ApplicantAccount;
 use App\Models\ApplicantContact;
 use App\Models\ApplicantInformation;
-use App\Models\ApplicantAccount;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
