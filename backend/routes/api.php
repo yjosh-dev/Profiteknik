@@ -9,6 +9,7 @@ use App\Http\Controllers\RootAccountController;
 use App\Http\Controllers\RootAuthController;
 use App\Http\Controllers\Users\ApplicantController;
 use App\Http\Controllers\Users\ApplicantDataController;
+use App\Http\Controllers\Users\ApplicantJobApplicationController;
 use App\Http\Controllers\Users\ApplicantJobListingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -68,6 +69,8 @@ Route::prefix('/applicant')->group(function () {
         Route::get('/verify', [ApplicantAuthController::class, 'verify'])->middleware('auth:sanctum');
         Route::post('/logout', [ApplicantAuthController::class, 'logout']);
     });
+
+    Route::post('/job_listing/{job_id}/apply', [ApplicantJobApplicationController::class, 'storeJobApplication'])->middleware('auth:sanctum');
 
 });
 
