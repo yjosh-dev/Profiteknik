@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApplicantJobApplication extends Model
 {
@@ -36,5 +37,15 @@ class ApplicantJobApplication extends Model
     public function screeningAnswers(): HasMany
     {
         return $this->hasMany(JobScreeningAnswers::class, 'application_id', 'application_id');
+    }
+
+    public function information(): HasOne
+    {
+        return $this->hasOne(ApplicantInformation::class, 'applicant_id', 'applicant_id');
+    }
+
+    public function contact(): HasOne
+    {
+        return $this->hasOne(ApplicantContact::class, 'applicant_id', 'applicant_id');
     }
 }
