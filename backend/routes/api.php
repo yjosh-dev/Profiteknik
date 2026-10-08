@@ -11,6 +11,8 @@ use App\Http\Controllers\Users\ApplicantController;
 use App\Http\Controllers\Users\ApplicantDataController;
 use App\Http\Controllers\Users\ApplicantJobApplicationController;
 use App\Http\Controllers\Users\ApplicantJobListingController;
+use App\Http\Controllers\Employee\JobApplicationsController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -43,7 +45,7 @@ Route::prefix('/employee')->group(function () {
             Route::get('/me', 'verifyMe');
         });
     });
-
+    Route::get('/jobs/{job}/applications', [JobApplicationsController::class, 'index']);
     Route::apiResource('job_listings', JobListingController::class);
 });
 

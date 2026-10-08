@@ -30,7 +30,6 @@ class JobListingService
                 'employment_type' => $data['employment_type'],
                 'posted_at' => $data['posted_at'] ?? now(),
                 'posted_until' => $data['posted_until'] ?? null,
-                'listed_by' => $data['listed_by'], // Employee ID
             ]);
 
             // 2. Create Job Requirements (Uses job_id as non-incrementing PK)
