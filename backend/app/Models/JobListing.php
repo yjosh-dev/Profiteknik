@@ -26,7 +26,7 @@ class JobListing extends Model
         'employment_type',
         'posted_at',
         'posted_until',
-        'listed_by',
+
     ];
 
     protected $casts = [
@@ -40,10 +40,6 @@ class JobListing extends Model
     /**
      * The employee who posted this job listing.
      */
-    public function listedBy(): BelongsTo
-    {
-        return $this->belongsTo(EmployeeAccount::class, 'listed_by', 'employee_id');
-    }
 
     public function requirements(): HasOne
     {
@@ -57,6 +53,6 @@ class JobListing extends Model
 
     public function applications(): HasMany
     {
-        return $this->hasMany(ApplicantJobApplications::class, 'job_id', 'job_id');
+        return $this->hasMany(ApplicantJobApplication::class, 'job_id', 'job_id');
     }
 }

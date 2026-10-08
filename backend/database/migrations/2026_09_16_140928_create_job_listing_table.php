@@ -21,7 +21,6 @@ return new class extends Migration
             $table->enum('employment_type', ['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary']);
             $table->timestamp('posted_at')->useCurrent();
             $table->date('posted_until')->nullable();
-            $table->foreignId('listed_by')->constrained('employee_account', 'employee_id')->onDelete('cascade');
             $table->timestamp('updated_at')->nullable();
         });
     }

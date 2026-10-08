@@ -56,7 +56,6 @@ class JobListingController extends Controller
             'employment_type' => 'required|string|max:100',
             'posted_at' => 'nullable|date',
             'posted_until' => 'nullable|date|after_or_equal:posted_at',
-            'listed_by' => 'required|exists:employee_account,employee_id',
             'requirements' => 'required|array',
             'requirements.highest_education' => 'nullable|string|max:255',
             'requirements.experience' => 'required|integer|min:0',
