@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 import { jobListingApi } from "../../service/api/employee/jobListingService";
-import { JobApplicationService } from "../../service/api/employee/jobApplicationService";
-import type { JobApplication } from "../../service/api/employee/jobApplicationService";
+import { JobApplicationService } from "../../service/api/employee/JobApplicationService";
 import type { JobListingDetailData } from "../../types/JobListingTypes";
 
 import { IoReturnUpBackSharp } from "react-icons/io5";
 import { FaRegEdit } from "react-icons/fa";
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdKeyboardArrowDown } from "react-icons/md";
+
+// Once the top section has been pushed up by this fraction of its height,
+// it disappears and an "Expand" bar takes its place.
+const COLLAPSE_RATIO = 0.6;
 
 export default function JobListingDetail() {
   const [jobListingData, setJobListingData] = useState<JobListingDetailData>();
@@ -16,13 +20,20 @@ export default function JobListingDetail() {
   const [error, setError] = useState<string | null>(null);
 
   // Applications state
-  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [appsLoading, setAppsLoading] = useState<boolean>(false);
   const [appsError, setAppsError] = useState<string | null>(null);
 
   // Pagination state for table
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+
+  // Resize state
+  const topInnerRef = useRef<HTMLDivElement>(null);
+  const [topOffset, setTopOffset] = useState<number>(0); // px the top section is pushed up
+  const [naturalTop, setNaturalTop] = useState<number>(0); // full height of top section
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [topCollapsed, setTopCollapsed] = useState<boolean>(false);
 
   const [searchParams] = useSearchParams();
   const job_id = searchParams.get("job_id");
@@ -66,6 +77,48 @@ export default function JobListingDetail() {
       fetchApplications(job_id);
     }
   }, [job_id]);
+
+  // ---- Resize handlers ----
+  const resetTop = () => {
+    setTopOffset(0);
+    setTopCollapsed(false);
+  };
+
+  const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const natural = topInnerRef.current?.offsetHeight ?? 0;
+    if (!natural) return;
+
+    setNaturalTop(natural);
+    setIsDragging(true);
+
+    const startY = e.clientY;
+    const startOffset = topOffset;
+
+    function onMove(ev: PointerEvent) {
+      // Dragging up grows the bottom panel; dragging down shrinks it back.
+      const next = Math.max(0, startOffset + (startY - ev.clientY));
+
+      if (next >= natural * COLLAPSE_RATIO) {
+        setTopCollapsed(true);
+        setTopOffset(0);
+        stop();
+        return;
+      }
+      setTopOffset(next);
+    }
+
+    function stop() {
+      setIsDragging(false);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
 
   if (loading) {
     return (
@@ -118,189 +171,266 @@ export default function JobListingDetail() {
     startIndex + itemsPerPage,
   );
 
-  return (
-    <div className="w-full h-screen p-6 bg-[#FAF9F6] flex flex-col gap-6 overflow-hidden">
-      <div className="w-full px-3 flex justify-end gap-3">
-        <button className="w-24 py-2 border-2 border-yellow-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
-          <FaRegEdit size={18} color="#F2A900" />
-          <p className="archivo font-medium text-sm text-yellow-500">Edit</p>
-        </button>
-        <button className="w-24 py-2 border-2 border-red-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
-          <MdDelete size={18} color="#E11A45" />
-          <p className="archivo font-medium text-sm text-red-500">Delete</p>
-        </button>
-        <button
-          className="w-24 py-2 rounded-md border border-gray-200 shadow-sm flex items-center justify-center hover:scale-110 hover:bg-gray-100 transition"
-          onClick={() => navigate(-1)}
-        >
-          <IoReturnUpBackSharp size={21} />
-        </button>
-      </div>
-      {/* FIXED TOP SECTION */}
-      <div className="w-full bg-white border border-[#E3E0D8] rounded-xl p-5 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6 shrink-0">
-        {/* Left: Job Information */}
-        <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:pr-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="archivo text-xs text-[#6B6F76] font-medium">
-                Job Listing #{jobListingData.job_id}
-              </span>
-              <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Active
-              </span>
-            </div>
+  const isResized = topOffset > 0;
 
-            <h1 className="archivo text-2xl text-[#1C2321] mb-3 font-bold leading-tight">
+  return (
+    <div
+      className={`w-full h-screen p-6 bg-[#FAF9F6] flex flex-col overflow-hidden ${
+        isDragging ? "select-none cursor-row-resize" : ""
+      }`}
+    >
+      {/* TOP SECTION (buttons + job overview), or the Expand bar once collapsed */}
+      {topCollapsed ? (
+        <div className="w-full bg-white border border-[#E3E0D8] rounded-xl px-5 py-3 shadow-sm flex items-center justify-between gap-4 shrink-0">
+          <div className="min-w-0">
+            <span className="archivo text-[10px] text-[#6B6F76] font-medium block">
+              Job Listing #{jobListingData.job_id}
+            </span>
+            <h1 className="archivo text-base text-[#1C2321] font-bold truncate">
               {jobListingData.job_title}
             </h1>
-
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
-                <span className={labelClass}>Employment Type</span>
-                <span className="text-xs font-semibold text-[#1C2321]">
-                  {jobListingData.employment_type}
-                </span>
-              </div>
-              <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
-                <span className={labelClass}>Vacant Positions</span>
-                <span className="text-xs font-semibold text-[#1C2321]">
-                  {jobListingData.vacant_position} Position(s)
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] mb-2">
-              <span className={labelClass}>Salary Range</span>
-              <span className="text-xs font-bold text-[#991B1B]">
-                ₱{jobListingData.minimum_salary.toLocaleString()} – ₱
-                {jobListingData.maximum_salary.toLocaleString()}
-              </span>
-            </div>
-
-            <div>
-              <span className={labelClass}>Description</span>
-              <p className="text-xs text-[#1C2321] bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] leading-relaxed line-clamp-2">
-                {jobListingData.job_description}
-              </p>
-            </div>
           </div>
+          <button
+            onClick={resetTop}
+            className="archivo shrink-0 px-4 py-2 rounded-md border border-[#D8D5CD] bg-white shadow-sm flex items-center gap-1 text-sm font-medium text-[#1C2321] hover:bg-[#FAF9F6] transition"
+          >
+            <MdKeyboardArrowDown size={20} />
+            Expand
+          </button>
+        </div>
+      ) : (
+        <div
+          className={`shrink-0 ${isResized ? "overflow-hidden" : ""} ${
+            isDragging ? "" : "transition-[height] duration-200"
+          }`}
+          style={isResized ? { height: naturalTop - topOffset } : undefined}
+        >
+          <div
+            ref={topInnerRef}
+            className={`flex flex-col gap-6 ${
+              isDragging ? "" : "transition-transform duration-200"
+            }`}
+            style={{ transform: `translateY(-${topOffset}px)` }}
+          >
+            <div className="w-full px-3 flex justify-end gap-3">
+              <button className="w-24 py-2 border-2 border-yellow-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
+                <FaRegEdit size={18} color="#F2A900" />
+                <p className="archivo font-medium text-sm text-yellow-500">
+                  Edit
+                </p>
+              </button>
+              <button className="w-24 py-2 border-2 border-red-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
+                <MdDelete size={18} color="#E11A45" />
+                <p className="archivo font-medium text-sm text-red-500">
+                  Delete
+                </p>
+              </button>
+              <button
+                className="w-24 py-2 rounded-md border border-gray-200 shadow-sm flex items-center justify-center hover:scale-110 hover:bg-gray-100 transition"
+                onClick={() => navigate(-1)}
+              >
+                <IoReturnUpBackSharp size={21} />
+              </button>
+            </div>
 
-          <div className="mt-2 pt-2 border-t border-[#E3E0D8] flex justify-between text-[10px] text-[#6B6F76] archivo">
-            <span>
-              Posted: {new Date(jobListingData.posted_at).toLocaleDateString()}
-            </span>
-            <span>
-              Until:{" "}
-              {new Date(jobListingData.posted_until).toLocaleDateString()}
-            </span>
+            <div className="w-full bg-white border border-[#E3E0D8] rounded-xl p-5 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left: Job Information */}
+              <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:pr-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="archivo text-xs text-[#6B6F76] font-medium">
+                      Job Listing #{jobListingData.job_id}
+                    </span>
+                    <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Active
+                    </span>
+                  </div>
+
+                  <h1 className="archivo text-2xl text-[#1C2321] mb-3 font-bold leading-tight">
+                    {jobListingData.job_title}
+                  </h1>
+
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
+                      <span className={labelClass}>Employment Type</span>
+                      <span className="text-xs font-semibold text-[#1C2321]">
+                        {jobListingData.employment_type}
+                      </span>
+                    </div>
+                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
+                      <span className={labelClass}>Vacant Positions</span>
+                      <span className="text-xs font-semibold text-[#1C2321]">
+                        {jobListingData.vacant_position} Position(s)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] mb-2">
+                    <span className={labelClass}>Salary Range</span>
+                    <span className="text-xs font-bold text-[#991B1B]">
+                      ₱{jobListingData.minimum_salary.toLocaleString()} – ₱
+                      {jobListingData.maximum_salary.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className={labelClass}>Description</span>
+                    <p className="text-xs text-[#1C2321] bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] leading-relaxed line-clamp-2">
+                      {jobListingData.job_description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-[#E3E0D8] flex justify-between text-[10px] text-[#6B6F76] archivo">
+                  <span>
+                    Posted:{" "}
+                    {new Date(jobListingData.posted_at).toLocaleDateString()}
+                  </span>
+                  <span>
+                    Until:{" "}
+                    {new Date(jobListingData.posted_until).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Center: Statistics Grid */}
+              <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:px-6 flex flex-col justify-between">
+                <div>
+                  <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76] mb-3">
+                    Mock Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>Total Applicants</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#1C2321]">
+                          48
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-medium">
+                          +12%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>Shortlisted</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#1C2321]">
+                          12
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-medium">
+                          +3 this week
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>Under Review</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#1C2321]">
+                          28
+                        </span>
+                        <span className="text-[10px] text-[#6B6F76]">
+                          Pending
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>Conversion Rate</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#991B1B]">
+                          25%
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-medium">
+                          High
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Minimum Qualifications preview */}
+                {jobListingData.requirements && (
+                  <div className="mt-2 bg-[#FAF9F6] p-2 rounded-xl border border-[#E3E0D8]">
+                    <span className={labelClass}>Qualifications</span>
+                    <div className="flex justify-between text-xs text-[#1C2321] font-medium">
+                      <span>
+                        Education:{" "}
+                        {jobListingData.requirements.highest_education}
+                      </span>
+                      <span>
+                        Experience: {jobListingData.requirements.experience}{" "}
+                        yr(s)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Applicants Per Day Graph */}
+              <div className="lg:col-span-4 lg:pl-2 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76]">
+                      Applicants Per Day
+                    </h3>
+                    <span className="text-[10px] text-[#6B6F76] bg-[#FAF9F6] px-2 py-0.5 rounded border border-[#E3E0D8]">
+                      This Week
+                    </span>
+                  </div>
+
+                  <div className="bg-[#FAF9F6] h-40 rounded-xl border border-[#E3E0D8] p-3 flex items-end justify-between gap-2">
+                    {[
+                      { day: "Mon", count: 8, height: "h-[40%]" },
+                      { day: "Tue", count: 14, height: "h-[70%]" },
+                      { day: "Wed", count: 20, height: "h-[100%]" },
+                      { day: "Thu", count: 10, height: "h-[50%]" },
+                      { day: "Fri", count: 6, height: "h-[30%]" },
+                    ].map((bar) => (
+                      <div
+                        key={bar.day}
+                        className="flex-1 flex flex-col items-center gap-1 h-full justify-end group"
+                      >
+                        <span className="text-[10px] font-semibold text-[#1C2321] group-hover:text-[#991B1B] transition-colors">
+                          {bar.count}
+                        </span>
+                        <div
+                          className={`w-full bg-[#991B1B] group-hover:bg-[#7F1D1D] rounded-t-sm transition-all ${bar.height}`}
+                        />
+                        <span className="archivo text-[9px] text-[#6B6F76] font-medium">
+                          {bar.day}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Center: Statistics Grid */}
-        <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:px-6 flex flex-col justify-between">
-          <div>
-            <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76] mb-3">
-              Mock Statistics
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                <span className={labelClass}>Total Applicants</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-xl font-bold text-[#1C2321]">48</span>
-                  <span className="text-[10px] text-emerald-600 font-medium">
-                    +12%
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                <span className={labelClass}>Shortlisted</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-xl font-bold text-[#1C2321]">12</span>
-                  <span className="text-[10px] text-emerald-600 font-medium">
-                    +3 this week
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                <span className={labelClass}>Under Review</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-xl font-bold text-[#1C2321]">28</span>
-                  <span className="text-[10px] text-[#6B6F76]">Pending</span>
-                </div>
-              </div>
-
-              <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                <span className={labelClass}>Conversion Rate</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-xl font-bold text-[#991B1B]">25%</span>
-                  <span className="text-[10px] text-emerald-600 font-medium">
-                    High
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Minimum Qualifications preview */}
-          {jobListingData.requirements && (
-            <div className="mt-2 bg-[#FAF9F6] p-2 rounded-xl border border-[#E3E0D8]">
-              <span className={labelClass}>Qualifications</span>
-              <div className="flex justify-between text-xs text-[#1C2321] font-medium">
-                <span>
-                  Education: {jobListingData.requirements.highest_education}
-                </span>
-                <span>
-                  Experience: {jobListingData.requirements.experience} yr(s)
-                </span>
-              </div>
-            </div>
-          )}
+      {/* RESIZE HANDLE (hidden once the top section is collapsed) */}
+      {!topCollapsed ? (
+        <div
+          onPointerDown={startDrag}
+          onDoubleClick={resetTop}
+          title="Drag to resize · double-click to reset"
+          className="group w-full h-6 shrink-0 flex items-center justify-center cursor-row-resize touch-none"
+        >
+          <div
+            className={`h-1.5 w-16 rounded-full transition-colors ${
+              isDragging ? "bg-[#991B1B]" : "bg-[#D8D5CD] group-hover:bg-[#991B1B]"
+            }`}
+          />
         </div>
+      ) : (
+        <div className="h-6 shrink-0" />
+      )}
 
-        {/* Right: Applicants Per Day Graph */}
-        <div className="lg:col-span-4 lg:pl-2 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76]">
-                Applicants Per Day
-              </h3>
-              <span className="text-[10px] text-[#6B6F76] bg-[#FAF9F6] px-2 py-0.5 rounded border border-[#E3E0D8]">
-                This Week
-              </span>
-            </div>
-
-            <div className="bg-[#FAF9F6] h-40 rounded-xl border border-[#E3E0D8] p-3 flex items-end justify-between gap-2">
-              {[
-                { day: "Mon", count: 8, height: "h-[40%]" },
-                { day: "Tue", count: 14, height: "h-[70%]" },
-                { day: "Wed", count: 20, height: "h-[100%]" },
-                { day: "Thu", count: 10, height: "h-[50%]" },
-                { day: "Fri", count: 6, height: "h-[30%]" },
-              ].map((bar) => (
-                <div
-                  key={bar.day}
-                  className="flex-1 flex flex-col items-center gap-1 h-full justify-end group"
-                >
-                  <span className="text-[10px] font-semibold text-[#1C2321] group-hover:text-[#991B1B] transition-colors">
-                    {bar.count}
-                  </span>
-                  <div
-                    className={`w-full bg-[#991B1B] group-hover:bg-[#7F1D1D] rounded-t-sm transition-all ${bar.height}`}
-                  />
-                  <span className="archivo text-[9px] text-[#6B6F76] font-medium">
-                    {bar.day}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SCROLLABLE BOTTOM SECTION */}
-      <div className="w-full border border-[#E3E0D8] rounded-xl p-5 shadow-sm flex flex-col flex-1 overflow-auto">
+      {/* BOTTOM SECTION: grows as the handle is dragged up */}
+      <div className="w-full min-h-0 border border-[#E3E0D8] rounded-xl p-5 shadow-sm flex flex-col flex-1 overflow-auto">
         {/* Header Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 pb-3 border-b border-[#E3E0D8] shrink-0">
           <div>
@@ -330,8 +460,8 @@ export default function JobListingDetail() {
           </div>
         </div>
 
-        {/* Scrollable Table Content */}
-        <div className="flex-1 min-h-[320px] max-h-[600px] overflow-y-auto border border-[#E3E0D8] rounded-lg">
+        {/* Scrollable Table Content (no max height so it grows with the panel) */}
+        <div className="flex-1 min-h-[320px] overflow-y-auto border border-[#E3E0D8] rounded-lg">
           <table className="w-full text-left text-sm border-collapse">
             <thead className="sticky top-0 bg-[#FAF9F6] z-10 border-b border-[#E3E0D8]">
               <tr className="archivo text-[11px] text-[#6B6F76] uppercase tracking-wider font-semibold">
