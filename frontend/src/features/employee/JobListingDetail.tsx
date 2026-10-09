@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 import { jobListingApi } from "../../service/api/employee/jobListingService";
+import { JobApplicationService } from "../../service/api/employee/jobApplicationService";
+import type { JobApplication } from "../../service/api/employee/jobApplicationService";
 import type { JobListingDetailData } from "../../types/JobListingTypes";
 
 import { IoReturnUpBackSharp } from "react-icons/io5";
@@ -13,6 +15,11 @@ export default function JobListingDetail() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Applications state
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [appsLoading, setAppsLoading] = useState<boolean>(false);
+  const [appsError, setAppsError] = useState<string | null>(null);
+
   // Pagination state for table
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(5);
@@ -21,6 +28,7 @@ export default function JobListingDetail() {
   const job_id = searchParams.get("job_id");
 
   const navigate = useNavigate();
+
   const fetchJobDetail = async (id: string | null) => {
     if (!id) return;
     try {
@@ -35,9 +43,27 @@ export default function JobListingDetail() {
     }
   };
 
+  const fetchApplications = async (id: string | null) => {
+    if (!id) return;
+    try {
+      setAppsLoading(true);
+      setAppsError(null);
+      const res = await JobApplicationService.fetchApplications(id);
+      setApplications(res.data);
+      setCurrentPage(1);
+    } catch (err: any) {
+      setAppsError(
+        err.response?.data?.message || "Failed to fetch applications.",
+      );
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (job_id) {
       fetchJobDetail(job_id);
+      fetchApplications(job_id);
     }
   }, [job_id]);
 
@@ -70,83 +96,24 @@ export default function JobListingDetail() {
   const labelClass =
     "archivo text-[11px] font-semibold uppercase tracking-wider text-[#6B6F76] mb-1 block";
 
-  const mockApplicants = [
-    {
-      id: 101,
-      name: "Juan Dela Cruz",
-      email: "juan@example.com",
-      date: "2026-09-17",
-      status: "Under Review",
-    },
-    {
-      id: 102,
-      name: "Maria Clara",
-      email: "maria@example.com",
-      date: "2026-09-16",
-      status: "Shortlisted",
-    },
-    {
-      id: 103,
-      name: "Crisostomo Ibarra",
-      email: "ibarra@example.com",
-      date: "2026-09-15",
-      status: "Rejected",
-    },
-    {
-      id: 104,
-      name: "Elias Salome",
-      email: "elias@example.com",
-      date: "2026-09-14",
-      status: "Shortlisted",
-    },
-    {
-      id: 105,
-      name: "Sisa Santos",
-      email: "sisa@example.com",
-      date: "2026-09-13",
-      status: "Under Review",
-    },
-    {
-      id: 106,
-      name: "Basilio Santos",
-      email: "basilio@example.com",
-      date: "2026-09-12",
-      status: "Shortlisted",
-    },
-    {
-      id: 107,
-      name: "Crispin Santos",
-      email: "crispin@example.com",
-      date: "2026-09-11",
-      status: "Under Review",
-    },
-    {
-      id: 108,
-      name: "Padre Damaso",
-      email: "damaso@example.com",
-      date: "2026-09-10",
-      status: "Rejected",
-    },
-    {
-      id: 109,
-      name: "Captain Tiago",
-      email: "tiago@example.com",
-      date: "2026-09-09",
-      status: "Shortlisted",
-    },
-    {
-      id: 110,
-      name: "Dona Victorina",
-      email: "victorina@example.com",
-      date: "2026-09-08",
-      status: "Under Review",
-    },
-  ];
+  const statusStyle = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "shortlisted":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "under review":
+      case "pending":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "rejected":
+        return "bg-rose-50 text-rose-700 border-rose-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
 
-  const totalItems = mockApplicants.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalItems = applications.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentApplicants = mockApplicants.slice(
+  const currentApplicants = applications.slice(
     startIndex,
     startIndex + itemsPerPage,
   );
@@ -376,34 +343,65 @@ export default function JobListingDetail() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E3E0D8] bg-white">
-              {currentApplicants.map((app) => (
-                <tr
-                  key={app.id}
-                  className="hover:bg-[#FAF9F6] transition-colors"
-                >
-                  <td className="p-3 font-medium text-[#1C2321]">{app.name}</td>
-                  <td className="p-3 text-[#6B6F76] text-xs">{app.email}</td>
-                  <td className="p-3 text-[#6B6F76] text-xs">{app.date}</td>
-                  <td className="p-3">
-                    <span
-                      className={`archivo text-[11px] px-2.5 py-1 rounded-full font-medium border ${
-                        app.status === "Shortlisted"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : app.status === "Under Review"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-rose-50 text-rose-700 border-rose-200"
-                      }`}
-                    >
-                      {app.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <button className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors">
-                      View Application
-                    </button>
+              {appsLoading ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="p-6 text-center text-xs text-[#6B6F76]"
+                  >
+                    Loading applications...
                   </td>
                 </tr>
-              ))}
+              ) : appsError ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="p-6 text-center text-xs text-[#991B1B]"
+                  >
+                    {appsError}
+                  </td>
+                </tr>
+              ) : currentApplicants.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="p-6 text-center text-xs text-[#6B6F76]"
+                  >
+                    No applications yet.
+                  </td>
+                </tr>
+              ) : (
+                currentApplicants.map((app) => (
+                  <tr
+                    key={app.application_id}
+                    className="hover:bg-[#FAF9F6] transition-colors"
+                  >
+                    <td className="p-3 font-medium text-[#1C2321]">
+                      {[app.first_name, app.last_name]
+                        .filter(Boolean)
+                        .join(" ") || "Unknown applicant"}
+                    </td>
+                    <td className="p-3 text-[#6B6F76] text-xs">
+                      {app.email ?? "—"}
+                    </td>
+                    <td className="p-3 text-[#6B6F76] text-xs">
+                      {app.date_applied ?? "—"}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`archivo text-[11px] px-2.5 py-1 rounded-full font-medium border ${statusStyle(app.status)}`}
+                      >
+                        {app.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <button className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors">
+                        View Application
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -411,9 +409,9 @@ export default function JobListingDetail() {
         {/* Pagination Footer */}
         <div className="flex items-center justify-between pt-3 mt-2 text-xs archivo text-[#6B6F76] shrink-0">
           <span>
-            Showing {startIndex + 1} to{" "}
-            {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems}{" "}
-            applicants
+            {totalItems === 0
+              ? "No applicants"
+              : `Showing ${startIndex + 1} to ${Math.min(startIndex + itemsPerPage, totalItems)} of ${totalItems} applicants`}
           </span>
 
           <div className="flex items-center gap-2">
