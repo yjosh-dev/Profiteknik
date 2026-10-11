@@ -63,9 +63,10 @@ Route::prefix('/applicant')->group(function () {
             Route::post('/experience', 'storeApplicantExperience');
             Route::post('/skills', 'storeApplicantSkills');
             Route::get('/profile', 'fetchApplicantProfile');
-            Route::post('/resume', [ApplicantDataController::class, 'storeApplicantResume']);
-            Route::delete('/resume', [ApplicantDataController::class, 'deleteApplicantResume']);
-            Route::get('/resume', [ApplicantDataController::class, 'downloadApplicantResume']);
+            Route::post('/resume', 'storeApplicantResume');
+            Route::delete('/resume', 'deleteApplicantResume');
+            Route::get('/resume', 'downloadApplicantResume');
+            Route::get('/my-jobs', 'fetchMyJobs');
         });
 
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {

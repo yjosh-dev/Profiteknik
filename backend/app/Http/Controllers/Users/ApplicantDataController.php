@@ -63,4 +63,9 @@ class ApplicantDataController extends Controller
     {
         return $this->applicantDataService->downloadResume($request);
     }
+
+    public function fetchMyJobs(Request $request)
+    {
+        return $this->applicantDataService->fetchMyJobs($request);
+    }
 }

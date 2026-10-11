@@ -273,4 +273,30 @@ class ApplicantDataService
             'uploaded_at' => $resume->date_uploaded?->toIso8601String(),
         ];
     }
+
+    public function fetchMyJobs(Request $request)
+    {
+        $applications = $request->user()
+            ->applications();
+
+        return response()->json([
+            'applicant_id' => $request->user()->applicant_id,
+
+            'pending' => (clone $applications)
+                ->where('status', 'Pending')
+                ->count(),
+
+            'shortlisted' => (clone $applications)
+                ->where('status', 'Shortlisted')
+                ->count(),
+
+            'interviews' => (clone $applications)
+                ->where('status', 'Interviews')
+                ->count(),
+
+            'rejected' => (clone $applications)
+                ->where('status', 'Rejected')
+                ->count(),
+        ]);
+    }
 }
