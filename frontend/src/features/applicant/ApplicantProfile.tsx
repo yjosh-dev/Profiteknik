@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowUpFromBracket,
+  FaEllipsis,
   FaFileLines,
   FaPen,
   FaXmark,
@@ -12,11 +13,17 @@ import { MdCheckCircle, MdError } from "react-icons/md";
 import { AuthContext } from "../../context/AuthProvider";
 import StatusModal from "../../components/ui/StatusModal";
 import { applicantProfileService } from "../../service/api/applicants/applicantProfileService";
+import { Document, Page, pdfjs } from "react-pdf";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 /* ---------- Types ---------- */
 
 type Tab = "resume" | "information" | "contact" | "experience" | "skills";
-type SectionId = "name" | "address" | "contact" | "experience";
+type SectionId = "name" | "address" | "contact" | "experience" | "resume";
 
 type Information = {
   first_name: string;
@@ -46,16 +53,23 @@ type Experience = {
   end_date: string | null; // null = currently working here
 };
 
+type SavedResume = {
+  name: string;
+  size: number | null;
+  uploaded_at: string | null; // ISO date
+};
+
 type ProfileResponse = {
   information: Partial<Information> | null;
   contact: Partial<Contact> | null;
   experiences: Partial<Experience>[] | null;
   skills: unknown[] | null;
+  resume: SavedResume | null;
 };
 
 type Status =
   | { type: "success"; message: string }
-  | { type: "error"; message: string }
+  | { type: "error"; message: string; heading?: string }
   | null;
 
 /* ---------- Constants ---------- */
@@ -228,6 +242,48 @@ function toSkills(raw: unknown[] | null): string[] {
     .filter(Boolean);
 }
 
+function isPdfName(name: string): boolean {
+  return name.toLowerCase().endsWith(".pdf");
+}
+
+// "2026-10-06T..." -> "3 days ago"
+function timeAgo(iso?: string | null): string {
+  if (!iso) return "";
+  const diffSec = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31536000],
+    ["month", 2592000],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  for (const [unit, secs] of units) {
+    if (Math.abs(diffSec) >= secs) {
+      return rtf.format(Math.round(diffSec / secs), unit);
+    }
+  }
+  return "just now";
+}
+
+// Tracks an element's content width so PDF pages can fit it
+function useElementWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.floor(entry.contentRect.width)),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width] as const;
+}
+
 /* ---------- Small building blocks ---------- */
 
 function Section({
@@ -363,6 +419,270 @@ function SkeletonBlock() {
   );
 }
 
+// Saved resume: file name, upload time, "..." menu and a first-page preview
+function ResumeCard({
+  resume,
+  url,
+  loadFailed,
+  busy,
+  downloading,
+  onOpen,
+  onDownload,
+  onReplace,
+  onRemove,
+}: {
+  resume: SavedResume;
+  url: string | null;
+  loadFailed: boolean;
+  busy: boolean;
+  downloading: boolean;
+  onOpen: () => void;
+  onDownload: () => void;
+  onReplace: () => void;
+  onRemove: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [previewRef, previewWidth] = useElementWidth<HTMLDivElement>();
+
+  const isPdf = isPdfName(resume.name);
+  const canPreview = isPdf && !!url && !thumbFailed;
+  const waiting = isPdf && !url && !loadFailed;
+
+  useEffect(() => setThumbFailed(false), [url]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menuOpen]);
+
+  const menuItem =
+    "archivo w-full text-left px-4 py-2 text-sm text-zinc-800 hover:bg-red-50 hover:text-red-700 cursor-pointer disabled:text-zinc-300 disabled:cursor-not-allowed";
+
+  return (
+    <div className="rounded-2xl border border-gray-200 px-5 py-4 shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="archivo text-base font-semibold text-zinc-900 truncate">
+            {resume.name}
+          </p>
+          <p className="archivo text-sm text-zinc-500">
+            {timeAgo(resume.uploaded_at) ||
+              (resume.size !== null ? formatSize(resume.size) : "")}
+          </p>
+        </div>
+
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            type="button"
+            aria-label="Resume options"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+            className="p-2 rounded-full text-zinc-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+          >
+            <FaEllipsis size={16} />
+          </button>
+
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-10 z-10 w-40 py-1 rounded-lg border border-gray-200 bg-white shadow-lg"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                disabled={downloading || busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDownload();
+                }}
+                className={menuItem}
+              >
+                {downloading ? "Downloading..." : "Download"}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onReplace();
+                }}
+                className={menuItem}
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onRemove();
+                }}
+                className={menuItem}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        ref={previewRef}
+        role="button"
+        tabIndex={0}
+        aria-label={canPreview ? "View resume" : "Download resume"}
+        onClick={canPreview ? onOpen : onDownload}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            (canPreview ? onOpen : onDownload)();
+          }
+        }}
+        className="relative mt-3 h-56 overflow-hidden rounded-lg border border-gray-200 bg-white cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      >
+        {canPreview && previewWidth > 0 ? (
+          <Document
+            file={url}
+            loading={null}
+            error={null}
+            onLoadError={() => setThumbFailed(true)}
+          >
+            <Page
+              pageNumber={1}
+              width={previewWidth}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          </Document>
+        ) : waiting ? (
+          <div className="h-full w-full animate-pulse bg-zinc-100" />
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-zinc-500">
+            <FaFileLines size={28} />
+            <p className="archivo text-sm">
+              {isPdf ? "Preview unavailable" : "No preview for this file type"}
+            </p>
+            <p className="archivo text-xs">Click to download</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Full PDF over a dimmed, blurred page. Click outside or press Esc to close.
+function ResumeViewer({
+  url,
+  name,
+  onClose,
+  onDownload,
+}: {
+  url: string;
+  name: string;
+  onClose: () => void;
+  onDownload: () => void;
+}) {
+  const [numPages, setNumPages] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [bodyRef, bodyWidth] = useElementWidth<HTMLDivElement>();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={name}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col w-full max-w-3xl max-h-[92vh] rounded-xl bg-white shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-200">
+          <p className="archivo text-sm font-semibold text-zinc-900 truncate">
+            {name}
+          </p>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onDownload}
+              className="archivo text-sm font-semibold text-red-700 hover:text-red-800 cursor-pointer"
+            >
+              Download
+            </button>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="p-1.5 rounded-full text-zinc-500 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+            >
+              <FaXmark size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={bodyRef}
+          className="flex-1 overflow-y-auto bg-zinc-100 p-4 space-y-4"
+        >
+          {failed ? (
+            <p className="archivo text-sm text-zinc-600 text-center py-10">
+              We couldn't display this file. Try downloading it instead.
+            </p>
+          ) : (
+            <Document
+              file={url}
+              loading={
+                <p className="archivo text-sm text-zinc-500 text-center py-10">
+                  Loading resume...
+                </p>
+              }
+              error={null}
+              onLoadError={() => setFailed(true)}
+              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+            >
+              {bodyWidth > 0 &&
+                Array.from({ length: numPages }, (_, i) => (
+                  <div key={i} className="mb-4 last:mb-0">
+                    <Page
+                      pageNumber={i + 1}
+                      width={bodyWidth}
+                      className="shadow-md"
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  </div>
+                ))}
+            </Document>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Component ---------- */
 
 export default function ApplicantProfile() {
@@ -396,11 +716,15 @@ export default function ApplicantProfile() {
   const [savingSection, setSavingSection] = useState<SectionId | null>(null);
   const [status, setStatus] = useState<Status>(null);
 
-  // Resume (local only for now)
-  const [resume, setResume] = useState<File | null>(null);
+  // Resume: `savedResume` is what the server has
+  const [savedResume, setSavedResume] = useState<SavedResume | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null); // blob URL for the PDF
+  const [resumeUrlFailed, setResumeUrlFailed] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   /* ----- Loading ----- */
 
@@ -423,6 +747,7 @@ export default function ApplicantProfile() {
       setSavedExperiences(experiences);
       setExpDraft(experiences);
       setSkills(toSkills(data.skills));
+      setSavedResume(data.resume ?? null);
       setEditing({});
     } catch (err) {
       console.error(err);
@@ -435,6 +760,39 @@ export default function ApplicantProfile() {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  // Once the profile says there's a PDF resume, fetch the file for the
+  // preview. Runs again after an upload/replace, and frees the blob URL.
+  useEffect(() => {
+    setResumeUrl(null);
+    setResumeUrlFailed(false);
+
+    if (!savedResume || !isPdfName(savedResume.name)) {
+      setViewerOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    (async () => {
+      try {
+        const token = localStorage.getItem("token") ?? "";
+        const res = await applicantProfileService.downloadApplicantResume(token);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(res.data);
+        setResumeUrl(objectUrl);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setResumeUrlFailed(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [savedResume]);
 
   /* ----- Editing helpers ----- */
 
@@ -598,17 +956,67 @@ export default function ApplicantProfile() {
 
   const handleModalClose = () => setStatus(null);
 
-  /* ----- Resume (local only) ----- */
+  /* ----- Resume ----- */
+
+  const uploadResume = (file: File) =>
+    runSave(
+      "resume",
+      savedResume
+        ? "Your resume has been replaced."
+        : "Your resume has been uploaded.",
+      async () => {
+        const token = localStorage.getItem("token") ?? "";
+        const res = await applicantProfileService.storeApplicantResume({
+          token,
+          resume: file,
+        });
+        setSavedResume(res.data.resume);
+      },
+    );
+
+  const removeResume = () =>
+    runSave("resume", "Your resume has been removed.", async () => {
+      const token = localStorage.getItem("token") ?? "";
+      await applicantProfileService.deleteApplicantResume(token);
+      setSavedResume(null);
+    });
+
+  const downloadResume = async () => {
+    if (!savedResume) return;
+    try {
+      setDownloading(true);
+      const token = localStorage.getItem("token") ?? "";
+      const res = await applicantProfileService.downloadApplicantResume(token);
+
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = savedResume.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      setStatus({
+        type: "error",
+        heading: "We couldn't download your resume",
+        message: "No resume found, or the download failed. Please try again.",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const acceptFile = (file: File | undefined) => {
-    if (!file) return;
+    if (!file || savingSection !== null) return;
     const error = validateResume(file);
     if (error) {
       setResumeError(error);
       return;
     }
     setResumeError(null);
-    setResume(file);
+    uploadResume(file);
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -620,11 +1028,6 @@ export default function ApplicantProfile() {
     e.preventDefault();
     setDragging(false);
     acceptFile(e.dataTransfer.files?.[0]);
-  };
-
-  const handleRemoveResume = () => {
-    setResume(null);
-    setResumeError(null);
   };
 
   const openPicker = () => fileInputRef.current?.click();
@@ -653,8 +1056,9 @@ export default function ApplicantProfile() {
   };
 
   const busy = savingSection !== null;
-  const dataTabLoading = activeTab !== "resume" && loading;
-  const dataTabFailed = activeTab !== "resume" && !loading && loadError;
+  const uploading = savingSection === "resume";
+  const dataTabLoading = loading;
+  const dataTabFailed = !loading && loadError;
 
   return (
     <div className="w-full flex flex-col items-center bg-white px-4 py-10">
@@ -742,7 +1146,7 @@ export default function ApplicantProfile() {
 
       {/* Tab content */}
       <div className="w-full max-w-3xl mt-6 px-1">
-        {/* Loading / error for the data tabs */}
+        {/* Loading / error for every tab (the resume comes with the profile) */}
         {dataTabLoading && (
           <div className="space-y-4">
             <SkeletonBlock />
@@ -766,73 +1170,58 @@ export default function ApplicantProfile() {
         )}
 
         {/* RESUME */}
-        {activeTab === "resume" && (
+        {activeTab === "resume" && !loading && !loadError && (
           <>
-            {resume ? (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-5 py-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 rounded-lg bg-red-50 text-red-700 flex items-center justify-center">
-                    <FaFileLines size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="archivo text-sm font-semibold text-zinc-900 truncate">
-                      {resume.name}
-                    </p>
-                    <p className="archivo text-xs text-zinc-500">
-                      {formatSize(resume.size)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <button
-                    type="button"
-                    onClick={openPicker}
-                    className="archivo text-sm font-semibold text-red-700 hover:text-red-800 cursor-pointer"
-                  >
-                    Replace
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Remove resume"
-                    onClick={handleRemoveResume}
-                    className="p-1.5 rounded-full text-zinc-500 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
-                  >
-                    <FaXmark size={14} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={openPicker}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openPicker();
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={handleDrop}
-                className={`flex flex-col items-center justify-center gap-2 h-36 rounded-xl border border-dashed text-center cursor-pointer outline-none transition-colors focus-visible:ring-2 focus-visible:ring-red-500 ${
-                  dragging
-                    ? "border-red-700 bg-red-50"
-                    : "border-red-600 hover:bg-red-50/60"
-                }`}
-              >
-                <FaArrowUpFromBracket size={18} className="text-red-700" />
-                <p className="archivo text-lg font-bold text-red-700">
-                  Upload a resume
-                </p>
-                <p className="archivo text-sm text-zinc-500">
-                  PDF, .doc, or .docx file under 5 MB.
-                </p>
+            {savedResume && (
+              <div className="mb-4">
+                <ResumeCard
+                  resume={savedResume}
+                  url={resumeUrl}
+                  loadFailed={resumeUrlFailed}
+                  busy={busy}
+                  downloading={downloading}
+                  onOpen={() => setViewerOpen(true)}
+                  onDownload={downloadResume}
+                  onReplace={openPicker}
+                  onRemove={removeResume}
+                />
               </div>
             )}
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={openPicker}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openPicker();
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center gap-2 h-36 rounded-xl border border-dashed text-center cursor-pointer outline-none transition-colors focus-visible:ring-2 focus-visible:ring-red-500 ${
+                dragging
+                  ? "border-red-700 bg-red-50"
+                  : "border-red-600 hover:bg-red-50/60"
+              }`}
+            >
+              <FaArrowUpFromBracket size={18} className="text-red-700" />
+              <p className="archivo text-lg font-bold text-red-700">
+                {uploading
+                  ? "Uploading..."
+                  : savedResume
+                    ? "Replace your resume"
+                    : "Upload a resume"}
+              </p>
+              <p className="archivo text-sm text-zinc-500">
+                PDF, .doc, or .docx file under 5 MB.
+              </p>
+            </div>
 
             {resumeError && (
               <p className="archivo text-sm text-red-700 mt-2">{resumeError}</p>
@@ -961,8 +1350,6 @@ export default function ApplicantProfile() {
           </Section>
         )}
 
-  
-
         {/* SKILLS (read-only for now) */}
         {activeTab === "skills" && !loading && !loadError && (
           <Section title="Skills">
@@ -986,6 +1373,16 @@ export default function ApplicantProfile() {
         )}
       </div>
 
+      {/* Resume viewer */}
+      {viewerOpen && resumeUrl && savedResume && (
+        <ResumeViewer
+          url={resumeUrl}
+          name={savedResume.name}
+          onClose={() => setViewerOpen(false)}
+          onDownload={downloadResume}
+        />
+      )}
+
       {/* Result modal */}
       {status && (
         <div
@@ -1004,7 +1401,7 @@ export default function ApplicantProfile() {
             />
           ) : (
             <StatusModal
-              heading="We couldn't save your changes"
+              heading={status.heading ?? "We couldn't save your changes"}
               description={status.message}
               icon={<MdError className="text-red-600" />}
               button_name="Try again"

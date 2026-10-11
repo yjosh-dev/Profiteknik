@@ -46,7 +46,39 @@ export const applicantProfileService = {
     skills: string[];
   }) => axiosClient.post("/applicant/skills", { skills }, authHeaders(token)),
 
-  // Profile page: information, contact, experiences and skills in one request
+  // Profile page, Resume tab: upload or replace (multipart, key "resume").
+  // The explicit Content-Type is needed because axiosClient defaults to JSON.
+  storeApplicantResume: async ({
+    token,
+    resume,
+  }: {
+    token: string;
+    resume: File;
+  }) => {
+    const formData = new FormData();
+    formData.append("resume", resume);
+
+    return axiosClient.post("/applicant/resume", formData, {
+      headers: {
+        ...authHeaders(token).headers,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  // Profile page, Resume tab: remove the saved resume
+  deleteApplicantResume: async (token: string) =>
+    axiosClient.delete("/applicant/resume", authHeaders(token)),
+
+  // Profile page, Resume tab: returns the file as a Blob (needs the auth
+  // header, so a plain <a href> won't work)
+  downloadApplicantResume: async (token: string) =>
+    axiosClient.get<Blob>("/applicant/resume", {
+      ...authHeaders(token),
+      responseType: "blob",
+    }),
+
+  // Profile page: information, contact, experiences, skills and resume in one request
   fetchApplicantProfile: async (token: string) =>
     axiosClient.get("/applicant/profile", authHeaders(token)),
 };
