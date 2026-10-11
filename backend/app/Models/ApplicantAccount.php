@@ -49,4 +49,9 @@ class ApplicantAccount extends Authenticatable
     {
         return $this->hasMany(ApplicantSkill::class, 'applicant_id', 'applicant_id');
     }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(ApplicantJobApplication::class, 'applicant_id', 'applicant_id');
+    }
 }
