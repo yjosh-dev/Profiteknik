@@ -45,12 +45,15 @@ type Contact = {
   tel_no: string;
 };
 
+// end_date: null = currently working here
+//           ""   = not current, end date not picked yet (draft only)
+//           "YYYY-MM" = ended
 type Experience = {
-  id: number;
+  id: number; // server record_id, or a negative temporary id for new rows
   job_title: string;
   company: string;
   start_date: string; // "YYYY-MM"
-  end_date: string | null; // null = currently working here
+  end_date: string | null;
 };
 
 type SavedResume = {
@@ -91,6 +94,7 @@ const STORAGE_URL =
 
 const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const MAX_RESUME_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_EXPERIENCES = 50; // matches the backend's max:50
 
 const NAME_FIELDS: InfoKey[] = [
   "first_name",
@@ -147,7 +151,10 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+\d{10,15}$/;
 const FALLBACK_ERROR = "Something went wrong. Please try again.";
 
-const thisMonth = new Date().toISOString().slice(0, 7);
+// Current month in the browser's local time, "YYYY-MM"
+// (toISOString would use UTC, which is wrong for the first hours of a month in PH)
+const today = new Date();
+const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
 const inputClass =
   "archivo w-full h-9 rounded-md border border-red-300 bg-red-50/30 px-2.5 text-sm text-zinc-800 placeholder-zinc-400 outline-none transition-all focus:border-red-700 focus:ring-1 focus:ring-red-700/40 disabled:bg-zinc-100 disabled:text-zinc-400";
@@ -166,16 +173,6 @@ function getInitials(name: string): string {
 function formatPhone(phone: string): string {
   const match = phone.match(/^\+63(\d{3})(\d{3})(\d{4})$/);
   return match ? `+63 ${match[1]} ${match[2]} ${match[3]}` : phone;
-}
-
-// "2024-03" -> "Mar 2024"
-function formatMonth(value: string): string {
-  if (!value) return "";
-  const [year, month] = value.split("-").map(Number);
-  return new Date(year, month - 1).toLocaleDateString("en-PH", {
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function validateResume(file: File): string | null {
@@ -222,13 +219,15 @@ function toContact(raw: Partial<Contact> | null): Contact {
   };
 }
 
+// The server sends { id, job_title, company, start_date, end_date } with
+// "YYYY-MM" dates. The slice(0, 7) is just a safety net.
 function toExperiences(raw: Partial<Experience>[] | null): Experience[] {
   return (raw ?? []).map((e) => ({
     id: Number(e.id),
     job_title: e.job_title ?? "",
     company: e.company ?? "",
-    start_date: e.start_date ?? "",
-    end_date: e.end_date ?? null,
+    start_date: (e.start_date ?? "").slice(0, 7),
+    end_date: e.end_date ? e.end_date.slice(0, 7) : null,
   }));
 }
 
@@ -400,6 +399,29 @@ function TextInput({
       onChange={(e) => onChange(e.target.value)}
       className={inputClass}
     />
+  );
+}
+
+// A label + always-visible input used by the experience cards
+function FormField({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="archivo text-xs text-zinc-500">{label}</span>
+      <div className="mt-0.5">{children}</div>
+      {error && (
+        <span className="archivo block text-[11px] text-red-700 mt-1">
+          {error}
+        </span>
+      )}
+    </label>
   );
 }
 
@@ -710,6 +732,10 @@ export default function ApplicantProfile() {
   const [expDraft, setExpDraft] = useState<Experience[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
 
+  // Negative ids for rows added in the browser, so they never clash with
+  // server ids. The server recreates every row on save anyway.
+  const nextTempId = useRef(-1);
+
   // Which pencils are active, e.g. { "name.first_name": true }
   const [editing, setEditing] = useState<Record<string, boolean>>({});
 
@@ -811,6 +837,22 @@ export default function ApplicantProfile() {
       prev.map((e) => (e.id === id ? { ...e, ...patch } : e)),
     );
 
+  // New jobs go on top. end_date "" = not current, so an end date is required.
+  const addExperience = () =>
+    setExpDraft((prev) => [
+      {
+        id: nextTempId.current--,
+        job_title: "",
+        company: "",
+        start_date: "",
+        end_date: "",
+      },
+      ...prev,
+    ]);
+
+  const removeExperience = (id: number) =>
+    setExpDraft((prev) => prev.filter((e) => e.id !== id));
+
   /* ----- Validation and dirty checks ----- */
 
   const infoErrors: Partial<Record<InfoKey, string>> = {};
@@ -840,11 +882,19 @@ export default function ApplicantProfile() {
   const experienceErrors = (e: Experience) => ({
     job_title: e.job_title.trim() ? undefined : "Required",
     company: e.company.trim() ? undefined : "Required",
-    start_date: e.start_date ? undefined : "Required",
-    end_date:
-      e.end_date && e.end_date < e.start_date
-        ? "Can't be before the start date."
+    start_date: !e.start_date
+      ? "Required"
+      : e.start_date > thisMonth
+        ? "Can't be in the future."
         : undefined,
+    end_date:
+      e.end_date === ""
+        ? 'Required, or tick "I currently work here".'
+        : e.end_date && e.end_date > thisMonth
+          ? "Can't be in the future."
+          : e.end_date && e.start_date && e.end_date < e.start_date
+            ? "Can't be before the start date."
+            : undefined,
   });
   const experienceDirty =
     JSON.stringify(expDraft) !== JSON.stringify(savedExperiences);
@@ -925,8 +975,9 @@ export default function ApplicantProfile() {
       clearEditing("contact.");
     });
 
-  {
-    /*  const saveExperience = () =>
+  // Replaces the whole list on the server. Every row gets a new record_id,
+  // so take the fresh list from the response.
+  const saveExperience = () =>
     runSave("experience", "Your work experience has been updated.", async () => {
       const token = localStorage.getItem("token") ?? "";
 
@@ -938,21 +989,15 @@ export default function ApplicantProfile() {
             job_title: e.job_title.trim(),
             company: e.company.trim(),
             start_date: e.start_date,
-            end_date: e.end_date,
-            is_current: e.end_date === null,
+            end_date: e.end_date || null, // null = currently working here
           })),
         },
       });
 
-      // Rows are re-created on save, so take the fresh ids from the server
-      const fresh = res.data?.experiences
-        ? toExperiences(res.data.experiences)
-        : expDraft;
+      const fresh = toExperiences(res.data?.experiences ?? []);
       setSavedExperiences(fresh);
       setExpDraft(fresh);
-      clearEditing("exp.");
-    });*/
-  }
+    });
 
   const handleModalClose = () => setStatus(null);
 
@@ -1347,6 +1392,122 @@ export default function ApplicantProfile() {
                 />
               </EditableField>
             </dl>
+          </Section>
+        )}
+
+        {/* EXPERIENCE */}
+        {activeTab === "experience" && !loading && !loadError && (
+          <Section
+            title="Work experience"
+            onSave={saveExperience}
+            dirty={experienceDirty}
+            saving={savingSection === "experience"}
+            disabled={!experienceDirty || !experienceValid || busy}
+          >
+            <button
+              type="button"
+              onClick={addExperience}
+              disabled={expDraft.length >= MAX_EXPERIENCES || busy}
+              className="archivo mb-4 h-9 px-4 rounded-md border border-red-700 text-red-700 text-sm font-semibold hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              + Add job
+            </button>
+
+            {expDraft.length === 0 && (
+              <p className="archivo text-sm text-zinc-500">
+                No work experience added.
+              </p>
+            )}
+
+            <div className="space-y-4">
+              {expDraft.map((e) => {
+                const errs = experienceErrors(e);
+                const isNew = e.id < 0;
+                // Don't shout "Required" at a row that was just added
+                const show = (msg?: string) =>
+                  msg && !(isNew && msg.startsWith("Required")) ? msg : undefined;
+                const current = e.end_date === null;
+
+                return (
+                  <div
+                    key={e.id}
+                    className="rounded-lg border border-gray-200 p-4 space-y-3"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <FormField label="Job title" error={show(errs.job_title)}>
+                        <input
+                          className={inputClass}
+                          value={e.job_title}
+                          maxLength={255}
+                          onChange={(ev) =>
+                            updateExperience(e.id, { job_title: ev.target.value })
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="Company" error={show(errs.company)}>
+                        <input
+                          className={inputClass}
+                          value={e.company}
+                          maxLength={255}
+                          onChange={(ev) =>
+                            updateExperience(e.id, { company: ev.target.value })
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="Start date" error={show(errs.start_date)}>
+                        <input
+                          type="month"
+                          className={inputClass}
+                          value={e.start_date}
+                          max={thisMonth}
+                          onChange={(ev) =>
+                            updateExperience(e.id, { start_date: ev.target.value })
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="End date" error={show(errs.end_date)}>
+                        <input
+                          type="month"
+                          className={inputClass}
+                          value={e.end_date ?? ""}
+                          min={e.start_date || undefined}
+                          max={thisMonth}
+                          disabled={current}
+                          onChange={(ev) =>
+                            updateExperience(e.id, { end_date: ev.target.value })
+                          }
+                        />
+                      </FormField>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="archivo text-sm text-zinc-700 flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={current}
+                          onChange={(ev) =>
+                            updateExperience(e.id, {
+                              end_date: ev.target.checked ? null : "",
+                            })
+                          }
+                        />
+                        I currently work here
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeExperience(e.id)}
+                        className="archivo text-sm text-red-700 hover:underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </Section>
         )}
 

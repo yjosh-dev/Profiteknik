@@ -8,6 +8,18 @@ const authHeaders = (token: string) => ({
   headers: { Authorization: `Bearer ${token}` },
 });
 
+export type ExperienceItemForm = {
+  job_title: string;
+  company: string;
+  start_date: string; // "YYYY-MM"
+  end_date: string | null; // "YYYY-MM", or null = currently working here
+};
+
+export type ExperienceForm = {
+  has_experience: boolean;
+  experiences: ExperienceItemForm[];
+};
+
 export const applicantProfileService = {
   // Step 1: personal information + optional profile photo (multipart)
   storeApplicantInformation: async ({
@@ -23,7 +35,12 @@ export const applicantProfileService = {
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
     if (profileImage) formData.append("profile_image", profileImage);
 
-    return axiosClient.post("/applicant/info", formData, authHeaders(token));
+    return axiosClient.post("/applicant/info", formData, {
+      headers: {
+        ...authHeaders(token).headers,
+        "Content-Type": "multipart/form-data",
+      },
+    });
   },
 
   // Step 2: email, mobile and telephone
@@ -35,7 +52,16 @@ export const applicantProfileService = {
     data: ContactForm;
   }) => axiosClient.post("/applicant/contact", data, authHeaders(token)),
 
-  // Step 3 (last): work history. Also marks the account as no longer new. to be created
+  // Step 3 (last) and Profile page, Experience tab: replaces the whole list
+  // and marks the account as no longer new.
+  // Response: { experiences: [{ id, job_title, company, start_date, end_date }] }
+  storeApplicantExperience: async ({
+    token,
+    data,
+  }: {
+    token: string;
+    data: ExperienceForm;
+  }) => axiosClient.post("/applicant/experience", data, authHeaders(token)),
 
   // Profile page, Skills tab: replaces the whole list
   storeApplicantSkills: async ({
