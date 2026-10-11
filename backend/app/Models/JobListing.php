@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -40,7 +39,6 @@ class JobListing extends Model
     /**
      * The employee who posted this job listing.
      */
-
     public function requirements(): HasOne
     {
         return $this->hasOne(JobRequirements::class, 'job_id', 'job_id');

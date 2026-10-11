@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class ApplicantJobApplication extends Model
 {
     protected $table = 'applicant_job_applications';
+
     public $timestamps = false;
+
     protected $primaryKey = 'application_id';
 
     protected $fillable = [

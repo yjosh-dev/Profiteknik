@@ -25,13 +25,13 @@ class JobApplicationsController extends Controller
             ->get()
             ->map(fn ($application) => [
                 'application_id' => $application->application_id,
-                'job_title'      => $job->job_title,
-                'job_id'         => $job->job_id,
-                'first_name'     => $application->information?->first_name,
-                'last_name'      => $application->information?->last_name,
-                'email'          => $application->contact?->email,
-                'status'         => $application->status,
-                'date_applied'   => $application->date_applied?->toDateString(),
+                'job_title' => $job->job_title,
+                'job_id' => $job->job_id,
+                'first_name' => $application->information?->first_name,
+                'last_name' => $application->information?->last_name,
+                'email' => $application->contact?->email,
+                'status' => $application->status,
+                'date_applied' => $application->date_applied?->toDateString(),
             ]);
 
         return response()->json($applications);

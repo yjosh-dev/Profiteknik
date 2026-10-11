@@ -26,8 +26,8 @@ class ApplicantJobApplicationService
         return DB::transaction(function () use ($request, $applicantId, $job) {
             $application = ApplicantJobApplication::create([
                 'applicant_id' => $applicantId,
-                'job_id'       => $job->job_id,
-                'status'       => 'pending',
+                'job_id' => $job->job_id,
+                'status' => 'pending',
                 'date_applied' => now()->toDateString(),
             ]);
 

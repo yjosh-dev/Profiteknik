@@ -13,18 +13,18 @@ return new class extends Migration
     {
         Schema::create('applicant_job_applications', function (Blueprint $table) {
             $table->id('application_id');
-            $table->unsignedInteger('applicant_id');   
-            $table->unsignedBigInteger('job_id');         
+            $table->unsignedInteger('applicant_id');
+            $table->unsignedBigInteger('job_id');
 
             $table->foreign('applicant_id')
-                  ->references('applicant_id')
-                  ->on('applicant_account')
-                  ->onDelete('cascade');
+                ->references('applicant_id')
+                ->on('applicant_account')
+                ->onDelete('cascade');
 
             $table->foreign('job_id')
-                  ->references('job_id')
-                  ->on('job_listing')
-                  ->onDelete('cascade');
+                ->references('job_id')
+                ->on('job_listing')
+                ->onDelete('cascade');
 
             $table->string('status')->default('pending');
             $table->date('date_applied');
