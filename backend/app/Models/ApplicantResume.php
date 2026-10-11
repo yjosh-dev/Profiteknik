@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApplicantResume extends Model
 {
@@ -13,7 +14,7 @@ class ApplicantResume extends Model
     protected $primaryKey = 'record_id';
 
     // Disable default timestamps if you are relying strictly on date_uploaded
-    // public $timestamps = false;
+    public $timestamps = false;
 
     protected $fillable = [
         'applicant_id',
