@@ -25,7 +25,6 @@ class JobListing extends Model
         'employment_type',
         'posted_at',
         'posted_until',
-
     ];
 
     protected $casts = [

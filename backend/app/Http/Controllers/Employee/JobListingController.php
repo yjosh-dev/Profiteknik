@@ -68,7 +68,6 @@ class JobListingController extends Controller
 
             return response()->json([
                 'message' => 'Job listing created successfully.',
-                'data' => $jobListing->load(['listedBy']),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
