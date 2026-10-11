@@ -5,6 +5,7 @@ namespace App\Services\Users;
 use App\Models\ApplicantAccount;
 use App\Models\ApplicantContact;
 use App\Models\ApplicantInformation;
+use App\Models\ApplicantResume;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -180,6 +181,10 @@ class ApplicantDataService
                 $account->experiences()->orderByDesc('start_date')->get()
             ),
             'skills' => $account->skills()->pluck(self::SKILL_COLUMN),
+            'resume' => $this->mapResume(
+                ApplicantResume::where('applicant_id', $account->applicant_id)->first()
+            ),
+
         ];
     }
 
@@ -192,5 +197,80 @@ class ApplicantDataService
             'start_date' => $e->start_date?->format('Y-m'),
             'end_date' => $e->end_date?->format('Y-m'),
         ])->values()->all();
+    }
+
+    public function storeResume(Request $request): ?array
+    {
+        $id = $request->user()->applicant_id;
+
+        $request->validate([
+            'resume' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120'], // 5 MB
+        ]);
+
+        $file = $request->file('resume');
+        $oldPath = ApplicantResume::where('applicant_id', $id)->value('resume');
+
+        // Keep the original file name in the path, since the table has no name column
+        $safeName = preg_replace('/[^\w.\- ]/u', '_', $file->getClientOriginalName());
+        $newPath = $file->storeAs("resumes/{$id}", $safeName, 'local');
+
+        try {
+            $resume = ApplicantResume::updateOrCreate(
+                ['applicant_id' => $id],
+                ['resume' => $newPath, 'date_uploaded' => now()]
+            );
+        } catch (\Throwable $e) {
+            if ($newPath !== $oldPath) {
+                Storage::disk('local')->delete($newPath);
+            }
+            throw $e;
+        }
+
+        // Same name means the file was overwritten, so don't delete it
+        if ($oldPath && $oldPath !== $newPath) {
+            Storage::disk('local')->delete($oldPath);
+        }
+
+        return $this->mapResume($resume);
+    }
+
+    public function deleteResume(Request $request): void
+    {
+        $resume = ApplicantResume::where('applicant_id', $request->user()->applicant_id)->first();
+
+        if (! $resume) {
+            return;
+        }
+
+        $path = $resume->resume;
+        $resume->delete();
+        Storage::disk('local')->delete($path);
+    }
+
+    public function downloadResume(Request $request)
+    {
+        $resume = ApplicantResume::where('applicant_id', $request->user()->applicant_id)->first();
+
+        if (! $resume || ! Storage::disk('local')->exists($resume->resume)) {
+            abort(404, 'No resume found.');
+        }
+
+        return Storage::disk('local')->download($resume->resume, basename($resume->resume));
+    }
+
+    private function mapResume(?ApplicantResume $resume): ?array
+    {
+        if (! $resume) {
+            return null;
+        }
+
+        $disk = Storage::disk('local');
+        $exists = $disk->exists($resume->resume);
+
+        return [
+            'name' => basename($resume->resume),
+            'size' => $exists ? $disk->size($resume->resume) : null,
+            'uploaded_at' => $resume->date_uploaded?->toIso8601String(),
+        ];
     }
 }

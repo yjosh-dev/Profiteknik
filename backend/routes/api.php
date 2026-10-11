@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApplicantAuthController;
+use App\Http\Controllers\Employee\JobApplicationsController;
 use App\Http\Controllers\Employee\JobListingController;
 use App\Http\Controllers\EmployeeAuthController;
 use App\Http\Controllers\OTPController;
@@ -11,8 +12,6 @@ use App\Http\Controllers\Users\ApplicantController;
 use App\Http\Controllers\Users\ApplicantDataController;
 use App\Http\Controllers\Users\ApplicantJobApplicationController;
 use App\Http\Controllers\Users\ApplicantJobListingController;
-use App\Http\Controllers\Employee\JobApplicationsController;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -64,6 +63,9 @@ Route::prefix('/applicant')->group(function () {
             Route::post('/experience', 'storeApplicantExperience');
             Route::post('/skills', 'storeApplicantSkills');
             Route::get('/profile', 'fetchApplicantProfile');
+            Route::post('/resume', [ApplicantDataController::class, 'storeApplicantResume']);
+            Route::delete('/resume', [ApplicantDataController::class, 'deleteApplicantResume']);
+            Route::get('/resume', [ApplicantDataController::class, 'downloadApplicantResume']);
         });
 
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {

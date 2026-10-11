@@ -44,4 +44,23 @@ class ApplicantDataController extends Controller
             $this->applicantDataService->fetchProfile($request)
         );
     }
+
+    public function storeApplicantResume(Request $request)
+    {
+        return response()->json([
+            'resume' => $this->applicantDataService->storeResume($request),
+        ]);
+    }
+
+    public function deleteApplicantResume(Request $request)
+    {
+        $this->applicantDataService->deleteResume($request);
+
+        return response()->json(['message' => 'Resume removed.']);
+    }
+
+    public function downloadApplicantResume(Request $request)
+    {
+        return $this->applicantDataService->downloadResume($request);
+    }
 }
