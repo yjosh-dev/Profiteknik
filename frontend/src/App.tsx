@@ -29,6 +29,8 @@ import ApplicantProfile from "./features/applicant/ApplicantProfile.tsx";
 import CompleteAccountInformation from "./features/applicant/CompleteAccountInformation.tsx";
 import SuccessfulApplication from "./components/common/SuccessfulApplication.tsx";
 import Apply from "./features/applicant/Apply.tsx";
+import MyJobs from "./layout/applicant/MyJobs.tsx";
+import PendingJobs from "./features/applicant/Jobs/PendingJobs.tsx";
 
 function App() {
   return (
@@ -61,6 +63,14 @@ function App() {
 
             <Route element={<ProtectedRoute path="/applicant/signin" />}>
               <Route element={<NewAccountGuard />}>
+                <Route path="/applicant/my_jobs" element={<MyJobs />}>
+                  <Route path="pending_jobs" element={<PendingJobs />} />
+                </Route>
+              </Route>
+            </Route>
+
+            <Route element={<ProtectedRoute path="/applicant/signin" />}>
+              <Route element={<NewAccountGuard />}>
                 <Route path="profile" element={<ApplicantProfile />} />
               </Route>
             </Route>
@@ -69,7 +79,7 @@ function App() {
               element={<CompleteAccountInformation />}
             />
           </Route>
-          
+
           <Route element={<ProtectedRoute path="/applicant/signin" />}>
             <Route element={<NewAccountGuard />}>
               <Route path="/applicant/:job_id/apply" element={<Apply />} />
