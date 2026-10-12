@@ -85,7 +85,7 @@ function Header({
       </h1>
 
       {/* Selection Tabs */}
-      <div className="flex gap-8 mt-6 border-b border-gray-200">
+      <div className="flex gap-10 mt-6 border-b border-gray-200">
 
         {/* Saved */}
         <button
@@ -106,7 +106,7 @@ function Header({
           className={({ isActive }) =>
             `flex flex-col pb-4 ${
               isActive
-                ? "text-black border-b-2 border-black"
+                ? "font-semibold text-black border-b-2 border-black"
                 : "text-gray-600 hover:text-black"
             }`
           }
