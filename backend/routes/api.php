@@ -12,6 +12,7 @@ use App\Http\Controllers\Users\ApplicantController;
 use App\Http\Controllers\Users\ApplicantDataController;
 use App\Http\Controllers\Users\ApplicantJobApplicationController;
 use App\Http\Controllers\Users\ApplicantJobListingController;
+use App\Http\Controllers\Users\ApplicantMyJobsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +69,13 @@ Route::prefix('/applicant')->group(function () {
             Route::get('/resume', 'downloadApplicantResume');
             Route::get('/my-jobs', 'fetchMyJobs');
         });
+
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::controller(ApplicantMyJobsController::class)->group(function () {
+            Route::get('my-jobs/pending','fetchPendingApplications');
+        });
+    });
 
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {
         Route::post('/login', [ApplicantAuthController::class, 'login']);
