@@ -49,7 +49,7 @@ function Navbar() {
   const navItems = [
     { title: "Home", path: "" },
     { title: "Jobs", path: "job_wall" },
-    { title: "Saved", path: "saved" },
+    { title: "Saved", path: "my_jobs" },
     { title: "Career", path: "careers" },
   ];
 
