@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApplicantAuthController;
 use App\Http\Controllers\Employee\JobApplicationsController;
 use App\Http\Controllers\Employee\JobListingController;
+use App\Http\Controllers\Employee\ScreenApplicantController;
 use App\Http\Controllers\EmployeeAuthController;
 use App\Http\Controllers\OTPController;
 use App\Http\Controllers\Root\EmployeeAccountController;
@@ -47,6 +48,9 @@ Route::prefix('/employee')->group(function () {
     });
     Route::get('/jobs/{job}/applications', [JobApplicationsController::class, 'index']);
     Route::apiResource('job_listings', JobListingController::class);
+
+    Route::get('/screen-applicant', [ScreenApplicantController::class, 'show'])->middleware('auth:sanctum');
+    Route::patch('/screen-applicant/{applicationId}/status', [ScreenApplicantController::class, 'updateStatus']);
 });
 
 //  -------- A P P L I C A N T S  ----------
@@ -73,7 +77,7 @@ Route::prefix('/applicant')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::controller(ApplicantMyJobsController::class)->group(function () {
-            Route::get('my-jobs/pending','fetchPendingApplications');
+            Route::get('my-jobs/pending', 'fetchPendingApplications');
         });
     });
 

@@ -54,4 +54,12 @@ class ApplicantAccount extends Authenticatable
     {
         return $this->hasMany(ApplicantJobApplication::class, 'applicant_id', 'applicant_id');
     }
+
+    /**
+     * Relationship: An applicant can have an uploaded resume record.
+     */
+    public function resume(): HasOne
+    {
+        return $this->hasOne(ApplicantResume::class, 'applicant_id', 'applicant_id');
+    }
 }

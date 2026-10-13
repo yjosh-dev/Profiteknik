@@ -24,6 +24,7 @@ class JobApplicationsController extends Controller
             ->orderByDesc('date_applied')
             ->get()
             ->map(fn ($application) => [
+                'applicant_id' => $application->applicant_id,
                 'application_id' => $application->application_id,
                 'job_title' => $job->job_title,
                 'job_id' => $job->job_id,
