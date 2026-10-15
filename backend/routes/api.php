@@ -5,6 +5,8 @@ use App\Http\Controllers\Employee\JobApplicationsController;
 use App\Http\Controllers\Employee\JobListingController;
 use App\Http\Controllers\Employee\ScreenApplicantController;
 use App\Http\Controllers\EmployeeAuthController;
+use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\InterviewScheduleController;
 use App\Http\Controllers\OTPController;
 use App\Http\Controllers\Root\EmployeeAccountController;
 use App\Http\Controllers\RootAccountController;
@@ -50,7 +52,18 @@ Route::prefix('/employee')->group(function () {
     Route::apiResource('job_listings', JobListingController::class);
 
     Route::get('/screen-applicant', [ScreenApplicantController::class, 'show'])->middleware('auth:sanctum');
-    Route::patch('/screen-applicant/{applicationId}/status', [ScreenApplicantController::class, 'updateStatus']);
+    Route::patch('/screen-applicant/{applicationId}/status', [ScreenApplicantController::class, 'updateStatus'])->middleware('auth:sanctum');
+    Route::post('/screen-applicant/{applicationId}/interview', [InterviewScheduleController::class, 'store'])->middleware('auth:sanctum');
+    Route::get('/screen-applicant/{applicationId}/interview', [InterviewScheduleController::class, 'show'])->middleware('auth:sanctum');
+    Route::delete('/interview/{id}', [InterviewScheduleController::class, 'destroy'])->middleware('auth:sanctum');
+});
+
+//  ------------- G O O G L E  -----------------
+Route::get('/google/callback', [GoogleAuthController::class, 'callback']); // public, Google redirects here
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/google/auth-url', [GoogleAuthController::class, 'url']);
+    Route::get('/google/status', [GoogleAuthController::class, 'status']);
 });
 
 //  -------- A P P L I C A N T S  ----------
@@ -78,6 +91,9 @@ Route::prefix('/applicant')->group(function () {
 
         Route::controller(ApplicantMyJobsController::class)->group(function () {
             Route::get('my-jobs/pending', 'fetchPendingApplications');
+            Route::get('my-jobs/shortlisted', 'fetchShortlistedApplications');
+            Route::get('my-jobs/interview', 'fetchInterviewApplications');
+
         });
     });
 

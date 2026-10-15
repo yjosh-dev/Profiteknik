@@ -291,7 +291,7 @@ class ApplicantDataService
                 ->count(),
 
             'interviews' => (clone $applications)
-                ->where('status', 'Interviews')
+                ->where('status', 'Interview')
                 ->count(),
 
             'rejected' => (clone $applications)

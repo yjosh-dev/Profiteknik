@@ -24,4 +24,30 @@ class ApplicantMyJobsController extends Controller
             'applications' => $applications,
         ]);
     }
+
+    public function fetchShortlistedApplications(Request $request)
+    {
+        $applicant = $request->user();
+
+        $applications = $this->applicantMyJobService
+            ->fetchShortlistedApplications($applicant);
+
+        return response()->json([
+            'applicant_id' => $applicant->applicant_id,
+            'applications' => $applications,
+        ]);
+    }
+
+    public function fetchInterviewApplications(Request $request)
+    {
+        $applicant = $request->user();
+
+        $applications = $this->applicantMyJobService
+            ->fetchInterviewApplications($applicant);
+
+        return response()->json([
+            'applicant_id' => $applicant->applicant_id,
+            'applications' => $applications,
+        ]);
+    }
 }

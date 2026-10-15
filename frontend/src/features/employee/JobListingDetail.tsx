@@ -213,15 +213,15 @@ export default function JobListingDetail() {
             style={{ transform: `translateY(-${topOffset}px)` }}
           >
             <div className="w-full px-3 flex justify-end gap-3">
-              <button className="w-24 py-2 border-2 border-yellow-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
-                <FaRegEdit size={18} color="#F2A900" />
-                <p className="archivo font-medium text-sm text-yellow-500">
+              <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
+                <FaRegEdit size={18} color="bg-zinc-200" />
+                <p className="archivo font-medium text-sm text-zinc-600">
                   Edit
                 </p>
               </button>
-              <button className="w-24 py-2 border-2 border-red-300 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
-                <MdDelete size={18} color="#E11A45" />
-                <p className="archivo font-medium text-sm text-red-500">
+              <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
+                <MdDelete size={18} color="" />
+                <p className="archivo font-medium text-sm text-zinc-600">
                   Delete
                 </p>
               </button>
@@ -421,7 +421,9 @@ export default function JobListingDetail() {
         >
           <div
             className={`h-1.5 w-16 rounded-full transition-colors ${
-              isDragging ? "bg-[#991B1B]" : "bg-[#D8D5CD] group-hover:bg-[#991B1B]"
+              isDragging
+                ? "bg-[#991B1B]"
+                : "bg-[#D8D5CD] group-hover:bg-[#991B1B]"
             }`}
           />
         </div>
@@ -525,7 +527,14 @@ export default function JobListingDetail() {
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      <button className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors">
+                      <button
+                        className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors"
+                        onClick={() =>
+                          navigate(
+                            `/employee/dash/job_listing/application?job_id=${job_id}&applicant_id=${app.applicant_id}`,
+                          )
+                        }
+                      >
                         View Application
                       </button>
                     </td>

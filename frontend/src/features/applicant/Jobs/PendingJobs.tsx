@@ -61,10 +61,7 @@ function EmptyIllustration() {
       <rect x="84" y="164" width="60" height="9" fill="#991b1b" />
 
       {/* Bookmark ribbon */}
-      <polygon
-        points="214,80 256,80 256,176 235,156 214,176"
-        fill="#dc2626"
-      />
+      <polygon points="214,80 256,80 256,176 235,156 214,176" fill="#dc2626" />
     </svg>
   );
 }
@@ -154,7 +151,7 @@ export default function PendingJobs() {
             key={job.id}
             jobTitle={job.job_title}
             appliedAt={job.applied_at}
-            onView={() => navigate(applicationDetailPath(job.id))}
+            onView={() => navigate("/applicant/my_jobs/track_application")}
             onWithdraw={() => handleWithdraw(job.id)}
           />
         ))}

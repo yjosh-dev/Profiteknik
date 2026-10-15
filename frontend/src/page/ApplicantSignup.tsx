@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 
 import Card from "../components/ui/Card";
 import logo from "../assets/logo/profiteknik_logo.svg";
-import { FaGoogle, FaApple, FaArrowRight } from "react-icons/fa6";
+import { FaArrowRight } from "react-icons/fa6";
 import { OTPService } from "../service/api/applicants/OTPService";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +23,7 @@ export default function ApplicantSignup() {
   const [step, setStep] = useState<Step>("send-otp");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -55,7 +56,7 @@ export default function ApplicantSignup() {
   }, [step]);
 
   const getExpiration = () => {
-    return new Date(Date.now() + 5 * 60 * 1000).toISOString(); // +5 minutes, as string
+    return new Date(Date.now() + 5 * 60 * 1000).toISOString();
   };
 
   const setCache = ({
@@ -73,13 +74,14 @@ export default function ApplicantSignup() {
   };
 
   // email onchange event
-  const onChange = (e: any) => {
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
   };
 
   // go back previous step
   const handleBack = (current_step: Step) => {
     setEmail("");
+
     switch (current_step) {
       case "verify-otp":
         setStep("send-otp");
@@ -95,33 +97,53 @@ export default function ApplicantSignup() {
   // step 1 on sending otp
   const handleSendOTP = async () => {
     try {
-      const send = await OTPService.sendOTP(email);
-      setCache({ step, email, expiration: getExpiration() });
-      alert(`OTP sent to ${email}`);
+      setLoading(true);
+
+      await OTPService.sendOTP(email);
+
+      setCache({
+        step,
+        email,
+        expiration: getExpiration(),
+      });
+
       setStep("verify-otp");
-    } catch (error) {}
+    } catch (error) {
+      alert("Failed to send OTP.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // step 2 on verifying otp
   const handleVerifyOTP = async () => {
     try {
-      const verify = await OTPService.verifyOTP(email, otp);
-      alert(verify.data.message);
+      setLoading(true);
+
+      await OTPService.verifyOTP(email, otp);
+
       setStep("set-credentials");
     } catch (error) {
-      alert("invalid otp");
+      alert("Invalid OTP.");
+    } finally {
+      setLoading(false);
     }
   };
 
   // step 3 creating account password
   const handleCreateAccount = async () => {
     try {
-      const create = await OTPService.createAccount(email, password.password1);
+      setLoading(true);
+
+      await OTPService.createAccount(email, password.password1);
+
       sessionStorage.removeItem("step");
-      alert("account created");
+
       navigate("/applicant/signin");
     } catch (err) {
-      alert("error");
+      alert("Error creating account.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -134,6 +156,7 @@ export default function ApplicantSignup() {
           handleSendOTP={handleSendOTP}
         />
       )}
+
       {step == "verify-otp" && (
         <VerifyOTP
           email={email}
@@ -143,6 +166,7 @@ export default function ApplicantSignup() {
           onVerify={handleVerifyOTP}
         />
       )}
+
       {step == "set-credentials" && (
         <CreatePassword
           password={password}
@@ -150,6 +174,19 @@ export default function ApplicantSignup() {
           onChangeEmail={() => handleBack("set-credentials")}
           onCreateAccount={handleCreateAccount}
         />
+      )}
+
+      {/* LOADING OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="flex flex-col items-center gap-3 rounded-xl bg-white px-8 py-6 shadow-lg">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-red-700" />
+
+            <p className="text-sm font-medium text-gray-700">
+              Please wait...
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -167,10 +204,12 @@ function SendOTP({
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-5">
       <img src={logo} className="w-62" />
+
       <Card className="items-start gap-0 max-w-md w-full py-8 px-8 relative">
         <h1 className="archivo font-bold text-2xl text-zinc-900 mb-2">
           Ready to take the next step?
         </h1>
+
         <p className="archivo text-lg text-zinc-800 mb-4">
           Create an account or sign in.
         </p>
@@ -182,7 +221,9 @@ function SendOTP({
           You also acknowledge our{" "}
           <span className="text-red-600 underline cursor-pointer">Cookie</span>{" "}
           and{" "}
-          <span className="text-red-600 underline cursor-pointer">Privacy</span>{" "}
+          <span className="text-red-600 underline cursor-pointer">
+            Privacy
+          </span>{" "}
           policies. You will receive marketing messages from Indeed and may opt
           out at any time by following the unsubscribe link in our messages, or
           as detailed in our terms.
@@ -194,6 +235,7 @@ function SendOTP({
         >
           Email address <span className="text-red-600">*</span>
         </label>
+
         <input
           id="email"
           type="email"
@@ -241,13 +283,18 @@ function VerifyOTP({
 
   const handleChange = (index: number, raw: string) => {
     const digit = raw.replace(/\D/g, "").slice(-1);
+
     if (!digit) return;
 
     const chars = otp.padEnd(length, " ").split("");
+
     chars[index] = digit;
+
     onOtpChange(chars.join("").trimEnd());
 
-    if (index < length - 1) inputRefs.current[index + 1]?.focus();
+    if (index < length - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
 
   const handleKeyDown = (
@@ -256,7 +303,9 @@ function VerifyOTP({
   ) => {
     if (e.key === "Backspace") {
       e.preventDefault();
+
       const chars = otp.padEnd(length, " ").split("");
+
       if (otp[index]?.trim()) {
         chars[index] = " ";
         onOtpChange(chars.join("").trimEnd());
@@ -266,30 +315,40 @@ function VerifyOTP({
         inputRefs.current[index - 1]?.focus();
       }
     }
-    if (e.key === "ArrowLeft" && index > 0)
+
+    if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();
-    if (e.key === "ArrowRight" && index < length - 1)
+    }
+
+    if (e.key === "ArrowRight" && index < length - 1) {
       inputRefs.current[index + 1]?.focus();
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
+
     const pasted = e.clipboardData
       .getData("text")
       .replace(/\D/g, "")
       .slice(0, length);
+
     if (!pasted) return;
+
     onOtpChange(pasted);
+
     inputRefs.current[Math.min(pasted.length, length - 1)]?.focus();
   };
 
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-5">
       <img src={logo} className="w-62" />
+
       <Card className="items-start gap-0 max-w-md w-full py-8 px-8 relative">
         <h1 className="archivo font-bold text-2xl text-zinc-900 mb-2">
           OTP verification
         </h1>
+
         <p className="archivo text-sm text-zinc-500 mb-6 leading-relaxed">
           Please enter the OTP (One Time Password) sent to{" "}
           <p className="font-semibold">{email}</p>
@@ -380,12 +439,17 @@ function CreatePassword({
   onCreateAccount: () => void;
 }) {
   const { password1, password2 } = password;
+
   const isMatch = password1.length > 0 && password1 === password2;
   const showStatus = password2.length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPassword((prev) => ({ ...prev, [name]: value }));
+
+    setPassword((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const inputClass = `archivo w-full h-12 px-3 rounded-md border border-zinc-400
@@ -394,10 +458,12 @@ function CreatePassword({
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-5">
       <img src={logo} className="w-62" />
+
       <Card className="items-start gap-0 max-w-md w-full py-8 px-8 relative">
         <h1 className="archivo font-bold text-2xl text-zinc-900 mb-2">
           Create password
         </h1>
+
         <p className="archivo text-sm text-zinc-500 mb-6 leading-relaxed">
           Set a password to finish creating your account.
         </p>
@@ -405,6 +471,7 @@ function CreatePassword({
         <label className="archivo text-sm font-semibold text-zinc-800 mb-1">
           Password
         </label>
+
         <input
           type="text"
           name="password1"
@@ -417,13 +484,16 @@ function CreatePassword({
         <label className="archivo text-sm font-semibold text-zinc-800 mb-1">
           Confirm password
         </label>
+
         <input
           type="text"
           name="password2"
           autoComplete="new-password"
           value={password2}
           onChange={handleChange}
-          onKeyDown={(e) => e.key === "Enter" && isMatch && onCreateAccount()}
+          onKeyDown={(e) =>
+            e.key === "Enter" && isMatch && onCreateAccount()
+          }
           className={`${inputClass} mb-2`}
         />
 

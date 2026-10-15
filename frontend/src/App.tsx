@@ -31,6 +31,14 @@ import SuccessfulApplication from "./components/common/SuccessfulApplication.tsx
 import Apply from "./features/applicant/Apply.tsx";
 import MyJobs from "./layout/applicant/MyJobs.tsx";
 import PendingJobs from "./features/applicant/Jobs/PendingJobs.tsx";
+import { ApplicationLayout } from "./layout/employee/Applications/ApplicationLayout.tsx";
+import ApplicationEvaluation from "./features/employee/Applications/ApplicationEvaluation.tsx";
+import ApplicantInterview from "./features/employee/Applications/ApplicantInterview.tsx";
+import ApplicantConversation from "./features/employee/Applications/ApplicantConversation.tsx";
+import ApplicantConversations from "./features/applicant/Jobs/ApplicantConversations.tsx";
+import ShortlistedJobs from "./features/applicant/Jobs/ShortlistedJobs.tsx";
+import InterviewJobs from "./features/applicant/Jobs/InterviewJobs.tsx";
+import ApplicationTracker from "./features/applicant/Jobs/ApplicationTracker.tsx";
 
 function App() {
   return (
@@ -46,6 +54,7 @@ function App() {
               <Route path="register_employee" element={<RegisterEmployee />} />
             </Route>
           </Route>
+
           {/* EMPLOYEE */}
           <Route element={<ProtectedRoute path="/employee" />}>
             <Route path="/employee/dash" element={<EmployeeDashboard />}>
@@ -53,18 +62,26 @@ function App() {
               <Route path="create_job_listing" element={<JobListing />} />
               <Route path="manage_job_listing" element={<ManageJobListing />} />
               <Route path="job_listing" element={<JobListingDetail />} />
+              <Route path="job_listing/application" element={<ApplicationLayout />}>
+                <Route path="evaluation" element={<ApplicationEvaluation/>}/>
+                <Route path="interview" element={<ApplicantInterview/>}/>
+                <Route path="conversation" element={<ApplicantConversation/>}/>
+              </Route>
             </Route>
           </Route>
 
-          {/* EMPLOYEE */}
+          {/* APPLICANT */}
           <Route path="/applicant" element={<HomeLayout />}>
             <Route path="" element={<Home />} />
             <Route path="job_wall" element={<JobListingWall />} />
-
+            <Route path="conversations" element={<ApplicantConversations/>}/>
             <Route element={<ProtectedRoute path="/applicant/signin" />}>
               <Route element={<NewAccountGuard />}>
                 <Route path="/applicant/my_jobs" element={<MyJobs />}>
                   <Route path="pending_jobs" element={<PendingJobs />} />
+                  <Route path="shortlisted_jobs" element={<ShortlistedJobs />} />
+                  <Route path="interview_jobs" element={<InterviewJobs />} />
+                  <Route path="track_application" element={<ApplicationTracker />} />
                 </Route>
               </Route>
             </Route>
@@ -77,7 +94,7 @@ function App() {
             <Route
               path="/applicant/complete-account-info"
               element={<CompleteAccountInformation />}
-            />
+            >d</Route>
           </Route>
 
           <Route element={<ProtectedRoute path="/applicant/signin" />}>

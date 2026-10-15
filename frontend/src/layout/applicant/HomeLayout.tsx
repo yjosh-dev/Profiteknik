@@ -81,7 +81,7 @@ function Navbar() {
     auth?.setUserData(null);
     // With no token, checkAuth marks the user as unauthenticated
     await auth?.checkAuth(verifyType);
-    navigate("/");
+    navigate("/applicant");
   };
 
   return (
@@ -136,13 +136,19 @@ function Navbar() {
                 >
                   <IoNotificationsOutline size={24} />
                 </button>
-                <button
-                  type="button"
+                <NavLink
+                  to="conversations"
                   aria-label="Messages"
-                  className="p-2 rounded-full text-zinc-600 hover:bg-red-100 hover:text-red-500 transition-colors cursor-pointer"
+                  className={({ isActive }) =>
+                    `p-2 rounded-full transition-colors cursor-pointer ${
+                      isActive
+                        ? "bg-red-100 text-red-500"
+                        : "text-zinc-600 hover:bg-red-100 hover:text-red-500"
+                    }`
+                  }
                 >
                   <IoChatbubbleEllipsesOutline size={24} />
-                </button>
+                </NavLink>
 
                 {/* Profile + dropdown */}
                 <div ref={menuRef} className="relative">

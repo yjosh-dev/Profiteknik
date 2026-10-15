@@ -43,7 +43,6 @@ export const applicantProfileService = {
     });
   },
 
-  // Step 2: email, mobile and telephone
   storeApplicantContact: async ({
     token,
     data,

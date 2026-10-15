@@ -1,13 +1,23 @@
-import axiosClient from "../axiosClient"
+import axiosClient from "../axiosClient";
 
 export const applicantsMyJobService = {
-    fetchMyJobs: async(token: string) =>
-        axiosClient.get("/applicant/my-jobs", {
-            headers: {Authorization: `Bearer ${token}`}
-        }),
+  fetchMyJobs: async (token: string) =>
+    axiosClient.get("/applicant/my-jobs", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 
-    fetchPendingJobs: async(token: string) =>
-        axiosClient.get("/applicant/my-jobs/pending", {
-            headers: {Authorization: `Bearer ${token}`}
-        })
-}
+  fetchPendingJobs: async (token: string) =>
+    axiosClient.get("/applicant/my-jobs/pending", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  fetchShortlistedJobs: async (token: string) =>
+    axiosClient.get("/applicant/my-jobs/shortlisted", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  fetchInterviewJobs: async (token: string) =>
+    axiosClient.get("/applicant/my-jobs/interview", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+};
