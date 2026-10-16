@@ -18,6 +18,8 @@ export default defineConfig({
   },
 
   preview: {
-    allowedHosts: ["beautiful-compassion-production-8684.up.railway.app"],
+    host: "0.0.0.0",
+    port: Number(process.env.PORT) || 4173,
+    allowedHosts: ["surprising-encouragement-production-8a19.up.railway.app"],
   },
 });
