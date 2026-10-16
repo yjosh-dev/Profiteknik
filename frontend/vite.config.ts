@@ -23,7 +23,7 @@ export default defineConfig({
     host: "0.0.0.0",
     port: Number(process.env.PORT) || 4173,
     allowedHosts: [
-      "https://profiteknik.site/",
+      "profiteknik.site",
     ],
   },
 });
