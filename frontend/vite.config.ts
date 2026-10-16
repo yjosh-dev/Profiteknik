@@ -12,6 +12,8 @@ export default defineConfig({
   ],
 
   server: {
+    host: "0.0.0.0",
+
     proxy: {
       "/storage": "http://localhost:8000",
     },
@@ -20,6 +22,8 @@ export default defineConfig({
   preview: {
     host: "0.0.0.0",
     port: Number(process.env.PORT) || 4173,
-    allowedHosts: ["surprising-encouragement-production-8a19.up.railway.app"],
+    allowedHosts: [
+      "https://profiteknik.site/",
+    ],
   },
 });
