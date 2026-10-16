@@ -1,16 +1,19 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { UseAuth } from "../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 
 export default function NewAccountGuard() {
-  const navigate = useNavigate();
-  const { userData } = UseAuth();
-  if(!userData){
-    return;
-  }
+  const { userData, loading } = UseAuth();
+  const location = useLocation();
 
-  if(userData.userData.isNew == true){
-     navigate("/applicant/complete-account-info")
+  if (loading) return null; // or a spinner
+
+  if (!userData) return <Navigate to="/applicant/login" replace />;
+
+  const isCompletePage =
+    location.pathname === "/applicant/complete-account-info";
+
+  if (userData.userData.isNew && !isCompletePage) {
+    return <Navigate to="/applicant/complete-account-info" replace />;
   }
 
   return <Outlet />;

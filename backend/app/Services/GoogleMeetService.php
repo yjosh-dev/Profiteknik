@@ -8,13 +8,14 @@ use Carbon\Carbon;
 use Google\Client;
 use Google\Service\Calendar;
 use Google\Service\Calendar\Event;
+use Google\Service\Exception;
 use Illuminate\Support\Str;
 
 class GoogleMeetService
 {
     public function baseClient(): Client
     {
-        $client = new Client();
+        $client = new Client;
         $client->setClientId(config('services.google.client_id'));
         $client->setClientSecret(config('services.google.client_secret'));
         $client->setRedirectUri(config('services.google.redirect'));
@@ -44,7 +45,7 @@ class GoogleMeetService
     {
         $stored = GoogleToken::where('employee_id', $user->getKey())->first();
 
-        if (!$stored) {
+        if (! $stored) {
             throw new \RuntimeException('Google account not connected.');
         }
 
@@ -57,7 +58,7 @@ class GoogleMeetService
         ]);
 
         if ($client->isAccessTokenExpired()) {
-            if (!$stored->refresh_token) {
+            if (! $stored->refresh_token) {
                 throw new \RuntimeException('Google token expired. Please reconnect your account.');
             }
 
@@ -112,9 +113,9 @@ class GoogleMeetService
 
         try {
             $service->events->delete('primary', $eventId, ['sendUpdates' => 'all']);
-        } catch (\Google\Service\Exception $e) {
+        } catch (Exception $e) {
             // 404/410 = already deleted in Google Calendar, so just continue
-            if (!in_array($e->getCode(), [404, 410])) {
+            if (! in_array($e->getCode(), [404, 410])) {
                 throw $e;
             }
         }

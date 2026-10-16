@@ -6,9 +6,15 @@ import {
   FaXmark,
   FaChevronLeft,
   FaChevronRight,
+  FaEnvelope,
+  FaPhone,
+  FaBriefcase,
+  FaRegCalendar,
+  FaInbox,
 } from "react-icons/fa6";
 
 import { applicantScreeningService } from "../../../service/api/employee/applicantScreeningService";
+import MatchScoreCard from "../../../components/common/MatchScoreCard";
 
 // Required for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -68,6 +74,58 @@ export interface ScreeningData {
 }
 
 /* =========================================================
+   HELPERS
+========================================================= */
+
+// TODO: replace with real scores from your API
+const PLACEHOLDER_SCORES = [
+  { label: "Skills", score: 85 },
+  { label: "Experience", score: 60 },
+  { label: "Education", score: 90 },
+  { label: "Questions", score: 75 },
+];
+
+const formatDate = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "";
+
+const getInitials = (first: string, last: string) =>
+  `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase();
+
+const getStatusStyle = (status: string) => {
+  const s = status.toLowerCase();
+  if (["hired", "accepted", "approved", "shortlisted"].includes(s))
+    return "bg-green-50 text-green-700";
+  if (["rejected", "declined"].includes(s)) return "bg-red-50 text-red-700";
+  return "bg-amber-50 text-amber-700";
+};
+
+/* =========================================================
+   SHARED UI
+========================================================= */
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-14 text-[#6B6F76] bg-[#FAF9F6] rounded-xl">
+      <div className="w-12 h-12 rounded-full bg-[#F0EEEA] flex items-center justify-center">
+        <FaInbox size={18} />
+      </div>
+      <p className="archivo text-sm">{message}</p>
+    </div>
+  );
+}
+
+/* =========================================================
+   APPLICANT HEADER
+========================================================= */
+
+
+/* =========================================================
    SCORE GAUGE
 ========================================================= */
 
@@ -83,11 +141,8 @@ function ScoreGauge({ score, label }: ScoreGaugeProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative w-24 h-24">
-        <svg
-          className="w-full h-full -rotate-90"
-          viewBox="0 0 100 100"
-        >
+      <div className="relative w-20 h-20">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
@@ -107,17 +162,18 @@ function ScoreGauge({ score, label }: ScoreGaugeProps) {
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={progress}
+            className="transition-all duration-700 ease-out"
           />
         </svg>
 
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xl font-bold text-[#1C2321]">
+          <span className="archivo text-lg font-bold text-[#1C2321]">
             {score}%
           </span>
         </div>
       </div>
 
-      <span className="text-sm font-semibold text-[#6B6F76]">
+      <span className="archivo text-xs font-bold uppercase tracking-wide text-[#6B6F76]">
         {label}
       </span>
     </div>
@@ -132,15 +188,9 @@ interface QuestionnaireViewProps {
   screeningQa: ScreeningQA[];
 }
 
-function QuestionnaireView({
-  screeningQa,
-}: QuestionnaireViewProps) {
+function QuestionnaireView({ screeningQa }: QuestionnaireViewProps) {
   if (!screeningQa.length) {
-    return (
-      <div className="py-10 text-center text-[#6B6F76]">
-        No screening questions found.
-      </div>
-    );
+    return <EmptyState message="No screening questions found." />;
   }
 
   return (
@@ -148,23 +198,29 @@ function QuestionnaireView({
       {screeningQa.map((item, index) => (
         <div
           key={item.question_id}
-          className="border border-[#E3E0D8] rounded-lg p-4"
+          className="bg-[#FAF9F6] rounded-xl p-5"
         >
-          <p className="text-sm font-bold text-[#1C2321] mb-2">
-            Question {index + 1}
-          </p>
+          <div className="flex items-start gap-3">
+            <span className="archivo w-7 h-7 rounded-full bg-[#991B1B]/10 text-[#991B1B] text-xs font-bold flex items-center justify-center shrink-0">
+              {index + 1}
+            </span>
 
-          <p className="text-sm text-[#4B504D] mb-4">
-            {item.question_text}
-          </p>
+            <p className="archivo text-sm font-semibold text-[#1C2321] leading-relaxed pt-1">
+              {item.question_text}
+            </p>
+          </div>
 
-          <div className="bg-[#FAF9F6] border border-[#E3E0D8] rounded-lg p-3">
-            <p className="text-xs font-semibold text-[#6B6F76] mb-1">
-              Applicant Answer
+          <div className="mt-4 ml-10 bg-white rounded-lg p-4">
+            <p className="archivo text-[11px] font-bold uppercase tracking-wide text-[#6B6F76] mb-1.5">
+              Applicant answer
             </p>
 
-            <p className="text-sm text-[#1C2321]">
-              {item.answer_text || "No answer provided."}
+            <p className="archivo text-sm text-[#1C2321] leading-relaxed">
+              {item.answer_text || (
+                <span className="text-[#6B6F76] italic">
+                  No answer provided.
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -194,9 +250,7 @@ function ResumeView({ resume }: ResumeViewProps) {
       return;
     }
 
-    const bytes = Uint8Array.from(atob(resume.data), (c) =>
-      c.charCodeAt(0),
-    );
+    const bytes = Uint8Array.from(atob(resume.data), (c) => c.charCodeAt(0));
     const url = URL.createObjectURL(
       new Blob([bytes], { type: resume.mime_type }),
     );
@@ -205,39 +259,53 @@ function ResumeView({ resume }: ResumeViewProps) {
     return () => URL.revokeObjectURL(url);
   }, [resume?.data, resume?.mime_type]);
 
+  // Keyboard controls while the modal is open
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsModalOpen(false);
+      if (e.key === "ArrowLeft")
+        setPageNumber((c) => Math.max(c - 1, 1));
+      if (e.key === "ArrowRight")
+        setPageNumber((c) => Math.min(c + 1, numPages || 1));
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isModalOpen, numPages]);
+
   if (!resume) {
-    return (
-      <div className="py-10 text-center text-[#6B6F76]">
-        No resume uploaded.
-      </div>
-    );
+    return <EmptyState message="No resume uploaded." />;
   }
 
   if (!resumeUrl) {
-    return (
-      <div className="py-10 text-center text-[#6B6F76]">
-        Loading resume...
-      </div>
-    );
+    return <EmptyState message="Loading resume..." />;
   }
 
   // react-pdf only renders PDFs, so offer a download for Word files
   if (resume.mime_type !== "application/pdf") {
     return (
-      <div className="border border-[#E3E0D8] rounded-xl p-6 flex items-center justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#1C2321] truncate">
-            {resume.name}
-          </p>
-          <p className="text-xs text-[#6B6F76]">
-            Preview isn't available for this file type.
-          </p>
+      <div className="bg-[#FAF9F6] rounded-xl p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-red-50 text-[#991B1B] flex items-center justify-center shrink-0">
+            <FaFilePdf size={18} />
+          </div>
+
+          <div className="min-w-0">
+            <p className="archivo text-sm font-semibold text-[#1C2321] truncate">
+              {resume.name}
+            </p>
+            <p className="archivo text-xs text-[#6B6F76]">
+              Preview isn't available for this file type.
+            </p>
+          </div>
         </div>
 
         <a
           href={resumeUrl}
           download={resume.name}
-          className="px-4 py-2 rounded-lg bg-[#991B1B] text-white text-sm font-semibold hover:bg-[#7F1616] transition-colors shrink-0"
+          className="archivo px-4 py-2 rounded-lg bg-[#991B1B] text-white text-sm font-semibold hover:bg-[#7F1616] transition-colors shrink-0"
         >
           Download
         </a>
@@ -245,11 +313,7 @@ function ResumeView({ resume }: ResumeViewProps) {
     );
   }
 
-  const onDocumentLoadSuccess = ({
-    numPages,
-  }: {
-    numPages: number;
-  }) => {
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setPageNumber(1);
   };
@@ -259,9 +323,7 @@ function ResumeView({ resume }: ResumeViewProps) {
   };
 
   const nextPage = () => {
-    setPageNumber((current) =>
-      Math.min(current + 1, numPages),
-    );
+    setPageNumber((current) => Math.min(current + 1, numPages));
   };
 
   return (
@@ -269,71 +331,64 @@ function ResumeView({ resume }: ResumeViewProps) {
       {/* =====================================================
           SMALL PDF PREVIEW
       ===================================================== */}
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="w-full text-left group"
-        >
-          <div className="border border-[#E3E0D8] rounded-xl overflow-hidden bg-[#FAFAFA] hover:border-[#991B1B] transition-colors">
-            {/* Preview Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E0D8] bg-white">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-red-50 text-[#991B1B] flex items-center justify-center shrink-0">
-                  <FaFilePdf size={17} />
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#1C2321] truncate">
-                    Resume
-                  </p>
-
-                  <p className="text-xs text-[#6B6F76]">
-                    Click to view full resume
-                  </p>
-                </div>
+      <button
+        type="button"
+        onClick={() => setIsModalOpen(true)}
+        className="w-full text-left group cursor-pointer"
+      >
+        <div className="rounded-xl overflow-hidden bg-[#FAF9F6] transition-shadow group-hover:shadow-md">
+          {/* Preview Header */}
+          <div className="flex items-center justify-between gap-3 px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-lg bg-red-50 text-[#991B1B] flex items-center justify-center shrink-0">
+                <FaFilePdf size={18} />
               </div>
 
-              <span className="text-xs font-semibold text-[#991B1B] shrink-0">
-                Open
-              </span>
-            </div>
+              <div className="min-w-0">
+                <p className="archivo text-sm font-semibold text-[#1C2321] truncate">
+                  {resume.name || "Resume"}
+                </p>
 
-            {/* Partial PDF */}
-            <div className="relative h-[360px] overflow-hidden flex justify-center bg-[#EDEBE6]">
-              <Document
-                file={resumeUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                loading={
-                  <div className="flex items-center justify-center h-full text-sm text-[#6B6F76]">
-                    Loading resume...
-                  </div>
-                }
-                error={
-                  <div className="flex items-center justify-center h-full px-6 text-center text-sm text-red-500">
-                    Failed to load resume.
-                  </div>
-                }
-              >
-                <Page
-                  pageNumber={1}
-                  width={500}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                />
-              </Document>
-
-              {/* Fade at bottom so it looks intentionally partial */}
-              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#EDEBE6] to-transparent pointer-events-none" />
-
-              {/* Click overlay */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/95 rounded-lg shadow-md text-xs font-semibold text-[#1C2321]">
-                Click to view full resume
+                <p className="archivo text-xs text-[#6B6F76]">
+                  Uploaded {formatDate(resume.date_uploaded)}
+                </p>
               </div>
             </div>
+
+            <span className="archivo px-3 py-1.5 rounded-lg bg-white text-xs font-bold text-[#991B1B] group-hover:bg-[#991B1B] group-hover:text-white transition-colors shrink-0">
+              View full
+            </span>
           </div>
-        </button>
-      </div>
+
+          {/* Partial PDF */}
+          <div className="relative h-[340px] overflow-hidden flex justify-center bg-[#EDEBE6]">
+            <Document
+              file={resumeUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              loading={
+                <div className="flex items-center justify-center h-full text-sm text-[#6B6F76]">
+                  Loading resume...
+                </div>
+              }
+              error={
+                <div className="flex items-center justify-center h-full px-6 text-center text-sm text-red-500">
+                  Failed to load resume.
+                </div>
+              }
+            >
+              <Page
+                pageNumber={1}
+                width={500}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+
+            {/* Fade at bottom so it looks intentionally partial */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#EDEBE6] to-transparent pointer-events-none" />
+          </div>
+        </div>
+      </button>
 
       {/* =====================================================
           PDF MODAL
@@ -348,18 +403,18 @@ function ResumeView({ resume }: ResumeViewProps) {
             onClick={(event) => event.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-[#E3E0D8] shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 bg-white shadow-sm z-10 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-lg bg-red-50 text-[#991B1B] flex items-center justify-center">
                   <FaFilePdf size={17} />
                 </div>
 
                 <div className="min-w-0">
-                  <h2 className="font-bold text-[#1C2321]">
-                    Applicant Resume
+                  <h2 className="archivo font-bold text-[#1C2321] truncate">
+                    {resume.name || "Applicant Resume"}
                   </h2>
 
-                  <p className="text-xs text-[#6B6F76]">
+                  <p className="archivo text-xs text-[#6B6F76]">
                     Page {pageNumber} of {numPages || 1}
                   </p>
                 </div>
@@ -368,7 +423,7 @@ function ResumeView({ resume }: ResumeViewProps) {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-[#6B6F76] hover:bg-[#F0EEEA] hover:text-[#991B1B] transition-colors"
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-[#6B6F76] hover:bg-[#F0EEEA] hover:text-[#991B1B] transition-colors cursor-pointer"
                 aria-label="Close resume"
               >
                 <FaXmark size={20} />
@@ -394,41 +449,36 @@ function ResumeView({ resume }: ResumeViewProps) {
                 >
                   <Page
                     pageNumber={pageNumber}
-                    width={Math.min(
-                      window.innerWidth * 0.7,
-                      850,
-                    )}
+                    width={Math.min(window.innerWidth * 0.7, 850)}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
+                    className="shadow-lg"
                   />
                 </Document>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-center gap-4 px-5 py-4 bg-white border-t border-[#E3E0D8] shrink-0">
+            <div className="flex items-center justify-center gap-3 px-5 py-4 bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.06)] shrink-0">
               <button
                 type="button"
                 onClick={previousPage}
                 disabled={pageNumber <= 1}
-                className="w-10 h-10 rounded-lg border border-[#E3E0D8] flex items-center justify-center text-[#1C2321] hover:bg-[#FAF9F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-lg bg-[#F3F1EC] flex items-center justify-center text-[#1C2321] hover:bg-[#E8E6E0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Previous page"
               >
                 <FaChevronLeft size={14} />
               </button>
 
-              <span className="text-sm font-semibold text-[#1C2321] min-w-[80px] text-center">
+              <span className="archivo text-sm font-semibold text-[#1C2321] min-w-[80px] text-center tabular-nums">
                 {pageNumber} / {numPages || 1}
               </span>
 
               <button
                 type="button"
                 onClick={nextPage}
-                disabled={
-                  pageNumber >= numPages ||
-                  numPages === 0
-                }
-                className="w-10 h-10 rounded-lg border border-[#E3E0D8] flex items-center justify-center text-[#1C2321] hover:bg-[#FAF9F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                disabled={pageNumber >= numPages || numPages === 0}
+                className="w-10 h-10 rounded-lg bg-[#F3F1EC] flex items-center justify-center text-[#1C2321] hover:bg-[#E8E6E0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Next page"
               >
                 <FaChevronRight size={14} />
@@ -437,7 +487,7 @@ function ResumeView({ resume }: ResumeViewProps) {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="ml-3 px-5 py-2.5 rounded-lg bg-[#991B1B] text-white text-sm font-semibold hover:bg-[#7F1616] transition-colors"
+                className="archivo ml-3 px-5 py-2.5 rounded-lg bg-[#991B1B] text-white text-sm font-semibold hover:bg-[#7F1616] transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -457,43 +507,44 @@ interface ExperienceViewProps {
   experiences: Experience[];
 }
 
-function ExperienceView({
-  experiences,
-}: ExperienceViewProps) {
+function ExperienceView({ experiences }: ExperienceViewProps) {
   if (!experiences.length) {
-    return (
-      <div className="py-10 text-center text-[#6B6F76]">
-        No work experience found.
-      </div>
-    );
+    return <EmptyState message="No work experience found." />;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {experiences.map((experience) => (
         <div
           key={experience.record_id}
-          className="border border-[#E3E0D8] rounded-lg p-4"
+          className="flex items-start gap-4 bg-[#FAF9F6] rounded-xl p-5"
         >
-          <h3 className="font-bold text-[#1C2321]">
-            {experience.position}
-          </h3>
+          <div className="w-10 h-10 rounded-lg bg-white text-[#991B1B] flex items-center justify-center shrink-0">
+            <FaBriefcase size={16} />
+          </div>
 
-          <p className="text-sm text-[#6B6F76] mt-1">
-            {experience.company_name}
-          </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 className="archivo font-bold text-[#1C2321]">
+                {experience.position}
+              </h3>
 
-          <p className="text-xs text-[#6B6F76] mt-3">
-            {new Date(
-              experience.start_date,
-            ).toLocaleDateString()}{" "}
-            -{" "}
-            {experience.end_date
-              ? new Date(
-                  experience.end_date,
-                ).toLocaleDateString()
-              : "Present"}
-          </p>
+              {!experience.end_date && (
+                <span className="archivo px-2 py-0.5 rounded-full bg-[#991B1B]/10 text-[#991B1B] text-[11px] font-bold">
+                  Current
+                </span>
+              )}
+            </div>
+
+            <p className="archivo text-sm text-[#4B504D] mt-0.5">
+              {experience.company_name}
+            </p>
+
+            <p className="archivo text-xs text-[#6B6F76] mt-2">
+              {formatDate(experience.start_date)} –{" "}
+              {experience.end_date ? formatDate(experience.end_date) : "Present"}
+            </p>
+          </div>
         </div>
       ))}
     </div>
@@ -510,11 +561,7 @@ interface SkillsViewProps {
 
 function SkillsView({ skills }: SkillsViewProps) {
   if (!skills.length) {
-    return (
-      <div className="py-10 text-center text-[#6B6F76]">
-        No skills found.
-      </div>
-    );
+    return <EmptyState message="No skills found." />;
   }
 
   return (
@@ -522,7 +569,7 @@ function SkillsView({ skills }: SkillsViewProps) {
       {skills.map((skill, index) => (
         <span
           key={skill.skill_id ?? index}
-          className="px-3 py-2 rounded-lg bg-[#FAF9F6] border border-[#E3E0D8] text-sm font-medium text-[#1C2321]"
+          className="archivo px-3.5 py-2 rounded-full bg-[#F3F1EC] text-sm font-medium text-[#1C2321]"
         >
           {skill.skill_name}
         </span>
@@ -541,17 +588,15 @@ export default function ApplicantEvaluation() {
   const jobId = searchParams.get("job_id");
   const applicantId = searchParams.get("applicant_id");
 
-  const [applicantData, setApplicantData] =
-    useState<ScreeningData | null>(null);
-
-  const [loading, setLoading] = useState(true);
-
-  const [error, setError] = useState<string | null>(
+  const [applicantData, setApplicantData] = useState<ScreeningData | null>(
     null,
   );
 
-  const [activeTab, setActiveTab] =
-    useState("questionnaire");
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState("questionnaire");
 
   /* =======================================================
      FETCH SCREENING DATA
@@ -560,9 +605,7 @@ export default function ApplicantEvaluation() {
   useEffect(() => {
     const fetchScreeningDetails = async () => {
       if (!jobId || !applicantId) {
-        setError(
-          "Missing job ID or applicant ID in URL.",
-        );
+        setError("Missing job ID or applicant ID in URL.");
 
         setLoading(false);
         return;
@@ -572,18 +615,14 @@ export default function ApplicantEvaluation() {
         setLoading(true);
         setError(null);
 
-        const response =
-          await applicantScreeningService.getScreeningDetails(
-            jobId,
-            applicantId,
-          );
+        const response = await applicantScreeningService.getScreeningDetails(
+          jobId,
+          applicantId,
+        );
 
         setApplicantData(response.data.data);
       } catch (err: any) {
-        console.error(
-          "Failed to fetch screening details:",
-          err,
-        );
+        console.error("Failed to fetch screening details:", err);
 
         setError(
           err.response?.data?.message ||
@@ -598,41 +637,34 @@ export default function ApplicantEvaluation() {
   }, [jobId, applicantId]);
 
   /* =======================================================
-     LOADING
+     LOADING / ERROR / EMPTY
   ======================================================= */
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-sm text-[#6B6F76]">
+      <div className="flex flex-col items-center justify-center gap-3 min-h-[400px]">
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-[#E8E6E0] border-t-[#991B1B]" />
+        <p className="archivo text-sm text-[#6B6F76]">
           Loading applicant evaluation...
         </p>
       </div>
     );
   }
 
-  /* =======================================================
-     ERROR
-  ======================================================= */
-
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-sm text-red-500">
+        <p className="archivo text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">
           {error}
         </p>
       </div>
     );
   }
 
-  /* =======================================================
-     EMPTY
-  ======================================================= */
-
   if (!applicantData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-sm text-[#6B6F76]">
+        <p className="archivo text-sm text-[#6B6F76]">
           No applicant evaluation data found.
         </p>
       </div>
@@ -649,121 +681,82 @@ export default function ApplicantEvaluation() {
     {
       id: "questionnaire",
       label: "Questionnaire",
+      count: applicantData.screening_qa.length,
     },
-    {
-      id: "resume",
-      label: "Resume",
-    },
+    { id: "resume", label: "Resume", count: undefined },
     {
       id: "experience",
       label: "Experience",
+      count: applicant.experiences.length,
     },
-    {
-      id: "skills",
-      label: "Skills",
-    },
+    { id: "skills", label: "Skills", count: applicant.skills.length },
   ];
 
   return (
     <div className="w-full">
       {/* =====================================================
-          TITLE
+          APPLICANT HEADER
       ===================================================== */}
-
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#1C2321]">
-          Applicant Evaluation
-        </h2>
-
-        <p className="text-sm text-[#6B6F76] mt-1">
-          Review the applicant's qualifications and
-          submitted information.
-        </p>
+        
       </div>
 
       {/* =====================================================
           SCORE SECTION
       ===================================================== */}
-
-      <div className="border border-[#E3E0D8] rounded-xl p-5 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <ScoreGauge
-            score={85}
-            label="Skills"
-          />
-
-          <ScoreGauge
-            score={60}
-            label="Experience"
-          />
-
-          <ScoreGauge
-            score={90}
-            label="Education"
-          />
-
-          <ScoreGauge
-            score={75}
-            label="Questions"
-          />
-        </div>
-      </div>
+      <MatchScoreCard/>
 
       {/* =====================================================
-          CONTENT TABS
+          CONTENT TABS (segmented control, no borders)
       ===================================================== */}
-
-      <div className="border-b border-[#E3E0D8] mb-6">
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "text-[#991B1B] border-[#991B1B]"
-                  : "text-[#6B6F76] border-transparent hover:text-[#991B1B]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="mb-6 overflow-x-auto">
+        <div className="inline-flex items-center gap-1 bg-[#F3F1EC] rounded-lg p-1">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`archivo flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-white text-[#991B1B] shadow-sm"
+                    : "text-[#6B6F76] hover:text-[#1C2321]"
+                }`}
+              >
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span
+                    className={`px-1.5 min-w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      isActive
+                        ? "bg-[#991B1B]/10 text-[#991B1B]"
+                        : "bg-[#E8E6E0] text-[#6B6F76]"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* =====================================================
           TAB CONTENT
       ===================================================== */}
-
       <div>
         {activeTab === "questionnaire" && (
-          <QuestionnaireView
-            screeningQa={
-              applicantData.screening_qa
-            }
-          />
+          <QuestionnaireView screeningQa={applicantData.screening_qa} />
         )}
 
-        {activeTab === "resume" && (
-          <ResumeView
-            resume={applicant.resume}
-          />
-        )}
+        {activeTab === "resume" && <ResumeView resume={applicant.resume} />}
 
         {activeTab === "experience" && (
-          <ExperienceView
-            experiences={
-              applicant.experiences
-            }
-          />
+          <ExperienceView experiences={applicant.experiences} />
         )}
 
-        {activeTab === "skills" && (
-          <SkillsView
-            skills={applicant.skills}
-          />
-        )}
+        {activeTab === "skills" && <SkillsView skills={applicant.skills} />}
       </div>
     </div>
   );

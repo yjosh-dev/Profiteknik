@@ -2,15 +2,24 @@ import React, { useEffect, useState, useRef } from "react";
 
 import Card from "../components/ui/Card";
 import logo from "../assets/logo/profiteknik_logo.svg";
-import { FaArrowRight } from "react-icons/fa6";
+import {
+  FaArrowRight,
+  FaEnvelopeCircleCheck,
+  FaRegClock,
+  FaTriangleExclamation,
+} from "react-icons/fa6";
 import { OTPService } from "../service/api/applicants/OTPService";
 import { useNavigate } from "react-router-dom";
 
 type Step = "send-otp" | "verify-otp" | "set-credentials";
 
+// How long an OTP is valid. Keep this in sync with your backend / email template.
+const OTP_EXPIRY_SECONDS = 120;
+
 export default function ApplicantSignup() {
   const STEP_KEY = "step";
   const EMAIL_KEY = "email";
+  const EXPIRATION_KEY = "expiration";
 
   const isValidStep = (value: string | null): value is Step => {
     return (
@@ -23,6 +32,8 @@ export default function ApplicantSignup() {
   const [step, setStep] = useState<Step>("send-otp");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [expiration, setExpiration] = useState(""); // ISO string
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -35,7 +46,8 @@ export default function ApplicantSignup() {
   // reconcile session storage and usestate in event of refresh
   useEffect(() => {
     const cachedStep = sessionStorage.getItem(STEP_KEY);
-    const cachedEmail = sessionStorage.getItem("email");
+    const cachedEmail = sessionStorage.getItem(EMAIL_KEY);
+    const cachedExpiration = sessionStorage.getItem(EXPIRATION_KEY);
 
     if (isValidStep(cachedStep)) {
       setStep(cachedStep);
@@ -49,6 +61,10 @@ export default function ApplicantSignup() {
     if (!email) {
       setEmail(cachedEmail);
     }
+
+    if (cachedExpiration) {
+      setExpiration(cachedExpiration);
+    }
   }, []);
 
   useEffect(() => {
@@ -56,7 +72,7 @@ export default function ApplicantSignup() {
   }, [step]);
 
   const getExpiration = () => {
-    return new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    return new Date(Date.now() + OTP_EXPIRY_SECONDS * 1000).toISOString();
   };
 
   const setCache = ({
@@ -68,9 +84,9 @@ export default function ApplicantSignup() {
     email: string;
     expiration: string;
   }) => {
-    sessionStorage.setItem("email", email);
-    sessionStorage.setItem("step", step);
-    sessionStorage.setItem("expiration", expiration);
+    sessionStorage.setItem(EMAIL_KEY, email);
+    sessionStorage.setItem(STEP_KEY, step);
+    sessionStorage.setItem(EXPIRATION_KEY, expiration);
   };
 
   // email onchange event
@@ -84,6 +100,8 @@ export default function ApplicantSignup() {
 
     switch (current_step) {
       case "verify-otp":
+        setOtp("");
+        setOtpError("");
         setStep("send-otp");
         break;
 
@@ -101,15 +119,43 @@ export default function ApplicantSignup() {
 
       await OTPService.sendOTP(email);
 
+      const newExpiration = getExpiration();
+
       setCache({
-        step,
+        step: "verify-otp",
         email,
-        expiration: getExpiration(),
+        expiration: newExpiration,
       });
 
+      setExpiration(newExpiration);
       setStep("verify-otp");
     } catch (error) {
       alert("Failed to send OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // resend otp (from the verify step)
+  const handleResendOTP = async () => {
+    try {
+      setLoading(true);
+
+      await OTPService.sendOTP(email);
+
+      const newExpiration = getExpiration();
+
+      setCache({
+        step: "verify-otp",
+        email,
+        expiration: newExpiration,
+      });
+
+      setExpiration(newExpiration);
+      setOtp("");
+      setOtpError("");
+    } catch (error) {
+      alert("Failed to resend OTP.");
     } finally {
       setLoading(false);
     }
@@ -119,12 +165,13 @@ export default function ApplicantSignup() {
   const handleVerifyOTP = async () => {
     try {
       setLoading(true);
+      setOtpError("");
 
       await OTPService.verifyOTP(email, otp);
 
       setStep("set-credentials");
     } catch (error) {
-      alert("Invalid OTP.");
+      setOtpError("Invalid or expired code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -161,9 +208,15 @@ export default function ApplicantSignup() {
         <VerifyOTP
           email={email}
           otp={otp}
-          onOtpChange={setOtp}
+          onOtpChange={(value) => {
+            setOtp(value);
+            setOtpError("");
+          }}
           onCancel={() => handleBack("verify-otp")}
           onVerify={handleVerifyOTP}
+          onResend={handleResendOTP}
+          expiresAt={expiration}
+          error={otpError}
         />
       )}
 
@@ -264,12 +317,23 @@ function SendOTP({
   );
 }
 
+const formatTime = (totalSeconds: number) => {
+  const m = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+};
+
 function VerifyOTP({
   email,
   otp,
   onOtpChange,
   onCancel,
   onVerify,
+  onResend,
+  expiresAt,
+  error,
   length = 4,
 }: {
   email: string;
@@ -277,24 +341,67 @@ function VerifyOTP({
   onOtpChange: (otp: string) => void;
   onVerify: () => void;
   onCancel: () => void;
+  onResend: () => void;
+  expiresAt: string; // ISO string
+  error?: string;
   length?: number;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleChange = (index: number, raw: string) => {
-    const digit = raw.replace(/\D/g, "").slice(-1);
+  const getRemaining = () => {
+    const end = Date.parse(expiresAt);
+    if (Number.isNaN(end)) return 0;
+    return Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  };
 
-    if (!digit) return;
+  const [secondsLeft, setSecondsLeft] = useState(getRemaining);
+
+  const isExpired = secondsLeft <= 0;
+  const isLowTime = secondsLeft > 0 && secondsLeft <= 30;
+  const isComplete = Array.from({ length }).every((_, i) => otp[i]?.trim());
+  const canVerify = isComplete && !isExpired;
+
+  // Countdown — based on the stored expiration so it survives refreshes
+  useEffect(() => {
+    setSecondsLeft(getRemaining());
+
+    const id = setInterval(() => {
+      const remaining = getRemaining();
+      setSecondsLeft(remaining);
+      if (remaining === 0) clearInterval(id);
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  // Focus first box on mount and whenever a new code is issued
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, [expiresAt]);
+
+  const handleChange = (index: number, raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+
+    if (!digits) return;
 
     const chars = otp.padEnd(length, " ").split("");
 
-    chars[index] = digit;
-
-    onOtpChange(chars.join("").trimEnd());
-
-    if (index < length - 1) {
-      inputRefs.current[index + 1]?.focus();
+    if (digits.length === 1) {
+      chars[index] = digits;
+      onOtpChange(chars.join("").trimEnd());
+      if (index < length - 1) inputRefs.current[index + 1]?.focus();
+      return;
     }
+
+    // Multiple digits at once (SMS autofill / quick typing)
+    digits
+      .slice(0, length - index)
+      .split("")
+      .forEach((d, i) => {
+        chars[index + i] = d;
+      });
+    onOtpChange(chars.join("").trimEnd());
+    inputRefs.current[Math.min(index + digits.length, length - 1)]?.focus();
   };
 
   const handleKeyDown = (
@@ -323,6 +430,10 @@ function VerifyOTP({
     if (e.key === "ArrowRight" && index < length - 1) {
       inputRefs.current[index + 1]?.focus();
     }
+
+    if (e.key === "Enter" && canVerify) {
+      onVerify();
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -344,68 +455,115 @@ function VerifyOTP({
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-5">
       <img src={logo} className="w-62" />
 
-      <Card className="items-start gap-0 max-w-md w-full py-8 px-8 relative">
-        <h1 className="archivo font-bold text-2xl text-zinc-900 mb-2">
+      <Card className="items-center gap-0 max-w-md w-full py-8 px-8 relative">
+        {/* Icon */}
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 mb-4">
+          <FaEnvelopeCircleCheck size={24} className="text-red-600" />
+        </div>
+
+        <h1 className="archivo font-bold text-2xl text-zinc-900 mb-2 text-center">
           OTP verification
         </h1>
 
-        <p className="archivo text-sm text-zinc-500 mb-6 leading-relaxed">
-          Please enter the OTP (One Time Password) sent to{" "}
-          <p className="font-semibold">{email}</p>
+        <p className="archivo text-sm text-zinc-500 mb-6 leading-relaxed text-center">
+          Please enter the {length}-digit code sent to
+          <span className="mt-2 block break-all font-semibold text-zinc-800">
+            {email}
+          </span>
         </p>
 
-        <div className="flex items-center justify-center gap-3 w-full mb-6">
-          {Array.from({ length }).map((_, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputRefs.current[i] = el;
+        {/* OTP inputs */}
+        <div className="flex items-center justify-center gap-3 w-full mb-2">
+          {Array.from({ length }).map((_, i) => {
+            const filled = !!otp[i]?.trim();
+            return (
+              <input
+                key={i}
+                ref={(el) => {
+                  inputRefs.current[i] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                autoComplete={i === 0 ? "one-time-code" : "off"}
+                aria-label={`Digit ${i + 1} of ${length}`}
+                value={otp[i]?.trim() ?? ""}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                onPaste={handlePaste}
+                onFocus={(e) => e.target.select()}
+                className={`archivo w-14 h-14 text-center text-xl font-bold rounded-lg border-2
+                outline-none transition-all duration-150
+                focus:border-red-500 focus:ring-4 focus:ring-red-100
+                ${
+                  error
+                    ? "border-red-400 bg-red-50 text-red-700"
+                    : filled
+                      ? "border-red-600 bg-red-50 text-red-700"
+                      : "border-zinc-300 bg-white text-zinc-900"
+                }`}
+              />
+            );
+          })}
+        </div>
+
+        {/* Error message */}
+        <div className="h-6 w-full mb-2 flex items-center justify-center">
+          {error && (
+            <p className="archivo flex items-center gap-1.5 text-sm text-red-600">
+              <FaTriangleExclamation size={13} />
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Timer */}
+        <div className="w-full mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="archivo flex items-center gap-1.5 text-sm text-zinc-500">
+              <FaRegClock size={14} />
+              {isExpired ? "Code expired" : "Code expires in"}
+            </p>
+            <span
+              className={`archivo font-bold tabular-nums text-sm ${
+                isExpired || isLowTime ? "text-red-600" : "text-zinc-800"
+              }`}
+            >
+              {formatTime(secondsLeft)}
+            </span>
+          </div>
+
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                isLowTime || isExpired ? "bg-red-600" : "bg-red-400"
+              }`}
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.max(0, (secondsLeft / OTP_EXPIRY_SECONDS) * 100),
+                )}%`,
               }}
-              type="text"
-              inputMode="numeric"
-              autoComplete={i === 0 ? "one-time-code" : "off"}
-              maxLength={1}
-              value={otp[i]?.trim() ?? ""}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={handlePaste}
-              onFocus={(e) => e.target.select()}
-              className="archivo w-12 h-12 text-center text-lg font-bold rounded-md
-              border border-zinc-400 outline-none focus:border-red-500
-              transition-colors"
             />
-          ))}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between w-full mb-6">
-          <p className="archivo text-sm text-zinc-500">
-            Remaining time:{" "}
-            <span className="font-bold text-zinc-800">02:00</span>
-          </p>
-
-          <button
-            type="button"
-            className="archivo text-sm font-bold text-red-600 underline
-            disabled:text-zinc-400 disabled:no-underline disabled:cursor-not-allowed
-            cursor-pointer"
-          >
-            Didn't get code? Resend
-          </button>
-        </div>
-
+        {/* Verify */}
         <button
           type="button"
           onClick={onVerify}
+          disabled={!canVerify}
           className="w-full flex items-center justify-center gap-2 rounded-md bg-red-700
           py-3 text-white transition-all duration-200 mb-3
           hover:bg-red-500 hover:shadow-md
           active:scale-95
-          disabled:opacity-60 disabled:hover:shadow-none disabled:cursor-not-allowed
+          disabled:opacity-60 disabled:hover:shadow-none disabled:hover:bg-red-700
+          disabled:active:scale-100 disabled:cursor-not-allowed
           cursor-pointer"
         >
           <span className="archivo font-bold">Verify</span>
         </button>
 
+        {/* Cancel */}
         <button
           type="button"
           onClick={onCancel}
@@ -417,6 +575,24 @@ function VerifyOTP({
         >
           <span className="archivo font-bold">Cancel</span>
         </button>
+
+        {/* Resend */}
+        <p className="archivo text-sm text-zinc-500 mt-6">
+          Didn't get the code?{" "}
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={!isExpired}
+            className="font-bold text-red-600 underline
+            disabled:text-zinc-400 disabled:no-underline disabled:cursor-not-allowed
+            cursor-pointer"
+          >
+            Resend
+          </button>
+          {!isExpired && (
+            <span className="text-zinc-400"> in {formatTime(secondsLeft)}</span>
+          )}
+        </p>
       </Card>
     </div>
   );

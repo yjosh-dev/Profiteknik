@@ -5,6 +5,10 @@ namespace App\Services\Employee;
 use App\Models\ApplicantJobApplication;
 use App\Models\ApplicantResume;
 use Illuminate\Support\Facades\Storage;
+use App\Mail\ApplicationStatusMail;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 
 class ScreenApplicantService
 {
@@ -52,11 +56,43 @@ class ScreenApplicantService
     public function updateApplicationStatus(int $applicationId, string $status): ApplicantJobApplication
     {
         $application = ApplicantJobApplication::findOrFail($applicationId);
-        $application->update([
-            'status' => $status,
-        ]);
+        $application->update(['status' => $status]);
+
+        // Only email when the status actually changed (not when the same option is re-picked)
+        if ($application->wasChanged('status')) {
+            $this->notifyStatusChange($application, $status);
+        }
 
         return $application;
+    }
+
+    private function notifyStatusChange(ApplicantJobApplication $application, string $status): void
+    {
+        if (! ApplicationStatusMail::supports($status)) {
+            return;
+        }
+
+        $application->loadMissing(['information', 'contact', 'applicant', 'jobListing']);
+
+        $email = $application->contact->email ?? $application->applicant->email ?? null;
+        if (! $email) {
+            return;
+        }
+
+        $info = $application->information;
+        $job = $application->jobListing;
+        $name = trim(($info->first_name ?? '').' '.($info->last_name ?? ''));
+
+        // An email failure must never undo the status change
+        try {
+            Mail::to($email)->send(new ApplicationStatusMail(
+                $name !== '' ? $name : 'Applicant',
+                $job->job_title ?? $job->title ?? null,
+                $status,
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function getResumePayload(?ApplicantResume $resume): ?array

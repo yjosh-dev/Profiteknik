@@ -39,6 +39,7 @@ import ApplicantConversations from "./features/applicant/Jobs/ApplicantConversat
 import ShortlistedJobs from "./features/applicant/Jobs/ShortlistedJobs.tsx";
 import InterviewJobs from "./features/applicant/Jobs/InterviewJobs.tsx";
 import ApplicationTracker from "./features/applicant/Jobs/ApplicationTracker.tsx";
+import JobInterviews from "./features/employee/JobInterviews.tsx";
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
               <Route path="create_job_listing" element={<JobListing />} />
               <Route path="manage_job_listing" element={<ManageJobListing />} />
               <Route path="job_listing" element={<JobListingDetail />} />
+              <Route path="job_interviews" element={<JobInterviews />} />
               <Route path="job_listing/application" element={<ApplicationLayout />}>
                 <Route path="evaluation" element={<ApplicationEvaluation/>}/>
                 <Route path="interview" element={<ApplicantInterview/>}/>

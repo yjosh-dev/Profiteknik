@@ -17,7 +17,6 @@ export const applicantScreeningService = {
       },
       headers: authHeaders(),
     });
-
   },
 
   updateStatus: async (applicationId: string, status: string) => {
@@ -71,4 +70,7 @@ export const applicantScreeningService = {
     axiosClient.delete(`/employee/interview/${id}`, {
       headers: authHeaders(),
     }),
+
+  getInterviews: () =>
+    axiosClient.get("/employee/interviews", { headers: authHeaders() }),
 };

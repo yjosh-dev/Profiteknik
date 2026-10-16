@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterviewSchedule extends Model
 {
@@ -23,4 +24,9 @@ class InterviewSchedule extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
     ];
+
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(ApplicantJobApplication::class, 'application_id');
+    }
 }

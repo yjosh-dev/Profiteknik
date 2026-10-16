@@ -11,10 +11,10 @@ return new class extends Migration
     {
         // Safe to re-run: only adds what is missing
         Schema::table('interview_schedules', function (Blueprint $table) {
-            if (!Schema::hasColumn('interview_schedules', 'title')) {
+            if (! Schema::hasColumn('interview_schedules', 'title')) {
                 $table->string('title')->nullable()->after('scheduled_by');
             }
-            if (!Schema::hasColumn('interview_schedules', 'applicant_email')) {
+            if (! Schema::hasColumn('interview_schedules', 'applicant_email')) {
                 $table->string('applicant_email')->nullable()->after('title');
             }
         });
@@ -26,7 +26,7 @@ return new class extends Migration
                AND index_name = 'interview_schedules_application_id_unique'"
         )->c > 0;
 
-        if (!$hasUnique) {
+        if (! $hasUnique) {
             Schema::table('interview_schedules', function (Blueprint $table) {
                 $table->unique('application_id');
             });

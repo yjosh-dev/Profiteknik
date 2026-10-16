@@ -27,13 +27,13 @@ class GoogleAuthController extends Controller
 
         $returnTo = (string) $request->query('return_to', '');
         // only allow in-app paths, to avoid open redirects
-        if (!str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//')) {
+        if (! str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//')) {
             $returnTo = '';
         }
 
         $client = $this->google->baseClient();
         $client->setState(Crypt::encryptString(
-            $user->getKey() . '|' . now()->addMinutes(10)->timestamp . '|' . $returnTo
+            $user->getKey().'|'.now()->addMinutes(10)->timestamp.'|'.$returnTo
         ));
 
         return response()->json(['url' => $client->createAuthUrl()]);
@@ -60,7 +60,7 @@ class GoogleAuthController extends Controller
                 ''
             );
 
-            if ($request->has('error') || !$request->has('code')) {
+            if ($request->has('error') || ! $request->has('code')) {
                 return $this->back($returnTo, 'error');
             }
 
@@ -70,7 +70,7 @@ class GoogleAuthController extends Controller
             $token = $this->google->baseClient()->fetchAccessTokenWithAuthCode($request->code);
 
             if (isset($token['error'])) {
-                report(new \RuntimeException('Google token error: ' . json_encode($token)));
+                report(new \RuntimeException('Google token error: '.json_encode($token)));
 
                 return $this->back($returnTo, 'error');
             }
@@ -90,6 +90,6 @@ class GoogleAuthController extends Controller
         $base = rtrim(config('services.google.frontend_url'), '/');
         $sep = str_contains($returnTo, '?') ? '&' : '?';
 
-        return redirect($base . $returnTo . $sep . 'google=' . $flag);
+        return redirect($base.$returnTo.$sep.'google='.$flag);
     }
 }

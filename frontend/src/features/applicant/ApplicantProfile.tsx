@@ -751,6 +751,7 @@ export default function ApplicantProfile() {
   const [resumeUrl, setResumeUrl] = useState<string | null>(null); // blob URL for the PDF
   const [resumeUrlFailed, setResumeUrlFailed] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [profile_image, setProfile] = useState<any>();
 
   /* ----- Loading ----- */
 
@@ -761,11 +762,10 @@ export default function ApplicantProfile() {
       const token = localStorage.getItem("token") ?? "";
       const res = await applicantProfileService.fetchApplicantProfile(token);
       const data = res.data as ProfileResponse;
-
       const info = toInformation(data.information);
       const contact = toContact(data.contact);
       const experiences = toExperiences(data.experiences);
-
+      setProfile(res.data.information.applicant_profile_picture)
       setSavedInfo(info);
       setInfoDraft(info);
       setSavedContact(contact);
@@ -1110,9 +1110,9 @@ export default function ApplicantProfile() {
       {/* Avatar */}
       <div className="p-1.5 rounded-full border-2 border-gray-200">
         <div className="w-32 h-32 rounded-full bg-red-50 text-red-700 flex items-center justify-center overflow-hidden">
-          {profileImageUrl ? (
+          {profile_image ? (
             <img
-              src={profileImageUrl}
+              src={`http://localhost:8000/storage/${profile_image}`}
               alt={name}
               className="w-full h-full object-cover"
             />

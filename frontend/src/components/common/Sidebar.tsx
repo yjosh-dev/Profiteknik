@@ -9,9 +9,11 @@ import {
   MdManageAccounts,
   MdWorkHistory,
   MdWork,
+  MdVideoCameraFront
 } from "react-icons/md";
 import { AiFillDashboard } from "react-icons/ai";
 import { IoIosSave } from "react-icons/io";
+import { FaClipboardList } from "react-icons/fa";
 
 type SidebarProps = {
   handleMinimize: () => void;
@@ -80,6 +82,21 @@ const menuItemsEmployee: MenuSection[] = [
         name: "Manage listing",
         icon: <MdWorkHistory size={18} />,
         path: "manage_job_listing",
+      },
+    ],
+  },
+  {
+    section: "Interview and Management ",
+    contents: [
+      {
+        name: "Interviews",
+        icon: <MdVideoCameraFront size={18} />,
+        path: "job_interviews",
+      },
+      {
+        name: "Pooling",
+        icon: <FaClipboardList size={18} />,
+        path: "pooling",
       },
     ],
   },

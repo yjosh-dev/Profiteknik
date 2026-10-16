@@ -41,6 +41,9 @@ const fmtDate = (d: Date) =>
     year: "numeric",
   });
 
+const fmtDateShort = (d: Date) =>
+  d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+
 // Adjust the field names here if your API response differs
 function pickScreening(raw: any): Screening {
   const d = raw?.data ?? raw ?? {};
@@ -63,20 +66,24 @@ function pickScreening(raw: any): Screening {
 
 /* ---------------------------------- styles ---------------------------------- */
 
+const focusRing =
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#991B1B] focus-visible:ring-offset-2";
+
 const inputBase =
-  "w-full rounded-md border bg-white px-3 py-2.5 text-sm text-[#1C2321] outline-none transition-colors placeholder:text-[#9A9EA5] focus:border-[#991B1B] focus:ring-1 focus:ring-[#991B1B]";
+  "h-9 w-full rounded-md border bg-white px-3 text-sm text-[#1C2321] outline-none transition-colors placeholder:text-[#9A9EA5] focus:border-[#991B1B] focus:ring-1 focus:ring-[#991B1B]";
 
-const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-md bg-[#991B1B] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#7F1616] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#991B1B] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const inputBorder = (hasError: boolean) => (hasError ? "border-[#991B1B]" : "border-[#D9D6CE]");
 
-const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-md border border-[#E3E0D8] bg-white px-4 py-2.5 text-sm font-bold text-[#1C2321] transition-colors hover:bg-[#FAF9F6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#991B1B] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+const btnBase = `inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
 
-const chip = (active: boolean) =>
-  `rounded-md border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#991B1B] ${
+const btnPrimary = `${btnBase} bg-[#991B1B] text-white hover:bg-[#7F1616]`;
+const btnSecondary = `${btnBase} border border-[#D9D6CE] bg-white text-[#1C2321] hover:bg-[#FAF9F6]`;
+
+const quickChip = (active: boolean) =>
+  `rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${focusRing} ${
     active
-      ? "border-[#991B1B] bg-[#991B1B] text-white"
-      : "border-[#E3E0D8] bg-white text-[#1C2321] hover:border-[#991B1B] hover:text-[#991B1B]"
+      ? "bg-[#991B1B] text-white"
+      : "bg-[#F3F1EC] text-[#4A4F55] hover:bg-[#E8E6E0]"
   }`;
 
 /* -------------------------------- small parts -------------------------------- */
@@ -85,7 +92,7 @@ function Spinner({ light = false }: { light?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 ${
+      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 motion-reduce:animate-none ${
         light ? "border-white/40 border-t-white" : "border-[#E3E0D8] border-t-[#991B1B]"
       }`}
     />
@@ -93,7 +100,7 @@ function Spinner({ light = false }: { light?: boolean }) {
 }
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-[#E8E6E0] ${className}`} />;
+  return <div className={`animate-pulse rounded bg-[#E8E6E0] motion-reduce:animate-none ${className}`} />;
 }
 
 function Field({
@@ -111,7 +118,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-xs font-bold uppercase tracking-wide text-[#6B6F76]">
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-[#1C2321]">
         {label}
       </label>
       {children}
@@ -120,6 +127,15 @@ function Field({
       ) : hint ? (
         <span className="text-xs text-[#6B6F76]">{hint}</span>
       ) : null}
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2 text-sm">
+      <dt className="shrink-0 text-[#6B6F76]">{label}</dt>
+      <dd className="min-w-0 break-words text-right font-semibold">{children}</dd>
     </div>
   );
 }
@@ -391,23 +407,18 @@ export default function ApplicantInterview() {
 
   if (loading) {
     return (
-      <div className="archivo mx-auto max-w-4xl" role="status" aria-label="Loading interview details">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="mt-3 h-7 w-64" />
-        <Skeleton className="mt-3 h-4 w-96 max-w-full" />
-        <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-5">
-            <Skeleton className="h-10 w-full" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Skeleton className="h-10" />
-              <Skeleton className="h-10" />
-            </div>
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-44" />
+      <div className="archivo w-full" role="status" aria-label="Loading interview details">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="mt-2 h-3 w-72 max-w-full" />
+        <div className="mt-4 flex flex-col gap-4 rounded-lg border border-[#E3E0D8] bg-white p-4">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
           </div>
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
         <span className="sr-only">Loading…</span>
       </div>
@@ -428,13 +439,13 @@ export default function ApplicantInterview() {
   /* ----------------------------------- UI ----------------------------------- */
 
   return (
-    <section className="archivo mx-auto max-w-4xl text-[#1C2321]" aria-labelledby="iv-heading">
+    <section className="archivo w-full text-[#1C2321]" aria-labelledby="iv-heading">
       {/* HEADER */}
-      <header className="mb-6">
-        <h2 id="iv-heading" className="mt-1 text-2xl font-bold leading-tight">
+      <header className="mb-4">
+        <h2 id="iv-heading" className="text-lg font-bold leading-tight">
           {interview ? interview.title || "Interview" : "Schedule an interview"}
         </h2>
-        <p className="mt-1 max-w-prose text-sm text-[#6B6F76]">
+        <p className="mt-1 text-xs leading-relaxed text-[#6B6F76]">
           {interview
             ? `Meeting details for ${applicantName}.`
             : `Creates a Google Calendar event with a Meet link and emails the invite to ${applicantName}.`}
@@ -445,10 +456,10 @@ export default function ApplicantInterview() {
       {notice && (
         <div
           role={notice.kind === "error" ? "alert" : "status"}
-          className={`mb-6 border-l-2 px-4 py-3 text-sm ${
+          className={`mb-4 rounded-md border px-3 py-2 text-xs ${
             notice.kind === "error"
-              ? "border-[#991B1B] bg-[#991B1B]/5 text-[#991B1B]"
-              : "border-[#1C2321] bg-[#FAF9F6] text-[#1C2321]"
+              ? "border-[#991B1B]/25 bg-[#991B1B]/5 text-[#991B1B]"
+              : "border-[#E3E0D8] bg-[#FAF9F6] text-[#1C2321]"
           }`}
         >
           {notice.text}
@@ -457,18 +468,16 @@ export default function ApplicantInterview() {
 
       {/* GOOGLE CONNECTION */}
       {google === "checking" && (
-        <div className="mb-6 flex items-center gap-2 text-sm text-[#6B6F76]" role="status">
+        <div className="mb-4 flex items-center gap-2 text-xs text-[#6B6F76]" role="status">
           <Spinner /> Checking Google connection…
         </div>
       )}
 
       {google === "disconnected" && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-y border-[#E3E0D8] py-4">
-          <div>
-            <p className="text-sm font-bold">Connect your Google account</p>
-            <p className="mt-0.5 text-sm text-[#6B6F76]">
-              Meetings are created on your own calendar. You only need to connect once.
-            </p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#E3E0D8] bg-[#FAF9F6] px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Connect your Google account</p>
+            <p className="text-xs text-[#6B6F76]">Meetings are created on your own calendar. Connect once.</p>
           </div>
           <button type="button" className={btnPrimary} onClick={connectGoogle} disabled={connecting}>
             {connecting && <Spinner light />}
@@ -479,18 +488,17 @@ export default function ApplicantInterview() {
 
       {interview ? (
         /* ------------------------------ EXISTING MEETING ------------------------------ */
-        <div className="max-w-xl">
-          <div className="rounded-lg border border-[#E3E0D8] bg-white">
-            <div className="flex items-start justify-between gap-4 p-5">
-              <div>
-                <p className="text-lg font-bold">{fmtDate(new Date(interview.starts_at))}</p>
-                <p className="mt-0.5 text-sm text-[#6B6F76]">
-                  {fmtTime(new Date(interview.starts_at))} to {fmtTime(new Date(interview.ends_at))}
-                  <span className="mx-1.5">·</span>Philippine Time
+        <div>
+          <div className="overflow-hidden rounded-lg border border-[#E3E0D8] bg-white">
+            <div className="flex items-start justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="text-base font-bold leading-snug">{fmtDate(new Date(interview.starts_at))}</p>
+                <p className="mt-0.5 text-xs text-[#6B6F76]">
+                  {fmtTime(new Date(interview.starts_at))} to {fmtTime(new Date(interview.ends_at))}, Philippine Time
                 </p>
               </div>
               <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
                   isUpcoming ? "bg-[#991B1B]/10 text-[#991B1B]" : "bg-[#E8E6E0] text-[#6B6F76]"
                 }`}
               >
@@ -498,199 +506,177 @@ export default function ApplicantInterview() {
               </span>
             </div>
 
-            <dl className="divide-y divide-[#E3E0D8] border-t border-[#E3E0D8] text-sm">
-              <div className="flex items-baseline justify-between gap-4 px-5 py-3">
-                <dt className="text-[#6B6F76]">Invite sent to</dt>
-                <dd className="break-all text-right font-bold">
-                  {interview.applicant_email || "the applicant"}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 px-5 py-3">
-                <dt className="text-[#6B6F76]">Where</dt>
-                <dd className="text-right font-bold">Google Meet</dd>
-              </div>
+            <dl className="divide-y divide-[#EFEDE7] border-t border-[#E3E0D8] px-4">
+              <Row label="Invite sent to">{interview.applicant_email || "the applicant"}</Row>
+              <Row label="Where">Google Meet</Row>
             </dl>
 
-            {interview.meet_link ? (
-              <div className="border-t border-[#E3E0D8] p-5">
-                <a
-                  href={interview.meet_link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all text-sm font-bold text-[#991B1B] underline-offset-2 hover:underline"
-                >
-                  {interview.meet_link}
-                </a>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" className={btnSecondary} onClick={copyLink}>
-                    {copied ? "Copied" : "Copy link"}
-                  </button>
-                  {isUpcoming && (
-                    <a
-                      className={btnPrimary}
-                      href={interview.meet_link}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open Meet
-                    </a>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="border-t border-[#E3E0D8] p-5 text-sm text-[#6B6F76]">
-                The event exists but Google did not return a Meet link. Check your calendar.
-              </p>
-            )}
+            <div className="border-t border-[#E3E0D8] bg-[#FAF9F6] p-4">
+              {interview.meet_link ? (
+                <>
+                  <a
+                    href={interview.meet_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate text-sm font-semibold text-[#991B1B] underline-offset-2 hover:underline"
+                  >
+                    {interview.meet_link}
+                  </a>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {isUpcoming && (
+                      <a className={btnPrimary} href={interview.meet_link} target="_blank" rel="noreferrer">
+                        Open Meet
+                      </a>
+                    )}
+                    <button type="button" className={btnSecondary} onClick={copyLink}>
+                      {copied ? "Copied" : "Copy link"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-[#6B6F76]">
+                  The event exists but Google did not return a Meet link. Check your calendar.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => setConfirmingCancel(true)}
-              className="text-sm font-bold text-[#991B1B] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#991B1B]"
-            >
-              {isUpcoming ? "Delete meeting" : "Delete record and schedule a new one"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setConfirmingCancel(true)}
+            className={`mt-3 rounded text-sm font-semibold text-[#991B1B] underline-offset-2 hover:underline ${focusRing}`}
+          >
+            {isUpcoming ? "Delete meeting" : "Delete record and schedule a new one"}
+          </button>
         </div>
       ) : (
         /* ------------------------------ CREATE FORM ------------------------------ */
-        <div className="grid items-start gap-8 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <form
-            className="flex flex-col gap-5"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-          >
-            <Field label="Title" htmlFor="iv-title" error={show("title")}>
+        <form
+          className="flex flex-col gap-4 rounded-lg border border-[#E3E0D8] bg-white p-4"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <Field label="Title" htmlFor="iv-title" error={show("title")}>
+            <input
+              id="iv-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              aria-invalid={!!show("title")}
+              placeholder="Interview: Frontend Developer"
+              className={`${inputBase} ${inputBorder(!!show("title"))}`}
+            />
+          </Field>
+
+          <Field label="Applicant email" htmlFor="iv-email" error={show("email")}>
+            <input
+              id="iv-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={!!show("email")}
+              placeholder="applicant@example.com"
+              className={`${inputBase} ${inputBorder(!!show("email"))}`}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date" htmlFor="iv-date" error={show("date")}>
               <input
-                id="iv-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                aria-invalid={!!show("title")}
-                placeholder="Interview: Frontend Developer"
-                className={`${inputBase} ${show("title") ? "border-[#991B1B]" : "border-[#E3E0D8]"}`}
+                id="iv-date"
+                type="date"
+                min={todayStr()}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-invalid={!!show("date")}
+                className={`${inputBase} ${inputBorder(!!show("date"))}`}
               />
             </Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Date" htmlFor="iv-date" error={show("date")}>
-                <input
-                  id="iv-date"
-                  type="date"
-                  min={todayStr()}
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  aria-invalid={!!show("date")}
-                  className={`${inputBase} ${show("date") ? "border-[#991B1B]" : "border-[#E3E0D8]"}`}
-                />
-              </Field>
-
-              <Field label="Start time" htmlFor="iv-time" error={show("time")}>
-                <input
-                  id="iv-time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  aria-invalid={!!show("time")}
-                  className={`${inputBase} ${show("time") ? "border-[#991B1B]" : "border-[#E3E0D8]"}`}
-                />
-              </Field>
-            </div>
-
-            <Field label="Common start times">
-              <div className="flex flex-wrap gap-2">
-                {QUICK_TIMES.map((t) => {
-                  const [h, m] = t.split(":").map(Number);
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      aria-pressed={time === t}
-                      onClick={() => setTime(t)}
-                      className={chip(time === t)}
-                    >
-                      {fmtTime(new Date(2000, 0, 1, h, m))}
-                    </button>
-                  );
-                })}
-              </div>
+            <Field label="Start time" htmlFor="iv-time" error={show("time")}>
+              <input
+                id="iv-time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                aria-invalid={!!show("time")}
+                className={`${inputBase} ${inputBorder(!!show("time"))}`}
+              />
             </Field>
+          </div>
 
-            <Field label="Length">
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Meeting length">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    aria-pressed={duration === d}
-                    onClick={() => setDuration(d)}
-                    className={chip(duration === d)}
-                  >
-                    {d} min
-                  </button>
-                ))}
-              </div>
-            </Field>
+          <div className="-mt-2 flex flex-wrap gap-1" role="group" aria-label="Common start times">
+            {QUICK_TIMES.map((t) => {
+              const [h, m] = t.split(":").map(Number);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={time === t}
+                  onClick={() => setTime(t)}
+                  className={quickChip(time === t)}
+                >
+                  {fmtTime(new Date(2000, 0, 1, h, m))}
+                </button>
+              );
+            })}
+          </div>
 
-            <Field
-              label="Applicant email"
-              htmlFor="iv-email"
-              error={show("email")}
-              hint="The Google Calendar invite is sent here."
+          <Field label="Length">
+            <div
+              className="flex w-full overflow-hidden rounded-md border border-[#D9D6CE]"
+              role="group"
+              aria-label="Meeting length"
             >
-              <input
-                id="iv-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                aria-invalid={!!show("email")}
-                placeholder="applicant@example.com"
-                className={`${inputBase} ${show("email") ? "border-[#991B1B]" : "border-[#E3E0D8]"}`}
-              />
-            </Field>
+              {DURATIONS.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={duration === d}
+                  onClick={() => setDuration(d)}
+                  className={`h-9 flex-1 text-sm font-medium transition-colors ${
+                    i > 0 ? "border-l border-[#D9D6CE]" : ""
+                  } ${focusRing} focus-visible:ring-offset-0 focus-visible:ring-inset ${
+                    duration === d
+                      ? "bg-[#991B1B] text-white"
+                      : "bg-white text-[#1C2321] hover:bg-[#FAF9F6]"
+                  }`}
+                >
+                  {d}
+                  <span className="sr-only"> minutes</span>
+                  <span aria-hidden="true" className="ml-0.5 text-xs opacity-70">m</span>
+                </button>
+              ))}
+            </div>
+          </Field>
 
+          {/* FOOTER: inline summary + submit */}
+          <div className="flex flex-col gap-3 border-t border-[#EFEDE7] pt-4">
+            <p className="text-xs leading-relaxed text-[#6B6F76]" aria-live="polite">
+              {start && end ? (
+                <>
+                  <span className="font-semibold text-[#1C2321]">
+                    {fmtDateShort(start)}, {fmtTime(start)} to {fmtTime(end)}
+                  </span>{" "}
+                  Philippine Time. Invite goes to{" "}
+                  <span className="break-all">{email || "the applicant"}</span>.
+                </>
+              ) : (
+                "Pick a date and start time. Times are in Philippine Time (UTC+8)."
+              )}
+            </p>
             <button
               type="submit"
-              className={`${btnPrimary} w-full self-start sm:w-auto sm:min-w-[190px]`}
+              className={`${btnPrimary} w-full`}
               disabled={submitting || google === "checking"}
             >
               {submitting && <Spinner light />}
               {submitting ? "Creating meeting…" : "Create meeting"}
             </button>
-          </form>
-
-          {/* SUMMARY */}
-          <aside
-            aria-label="Meeting summary"
-            className="rounded-lg border border-[#E3E0D8] bg-[#FAF9F6] p-5 md:sticky md:top-4"
-          >
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[#991B1B]">Summary</h3>
-
-            <dl className="mt-3 divide-y divide-[#E3E0D8] text-sm">
-              {[
-                ["Applicant", applicantName],
-                ["Title", title || "—"],
-                ["Date", start ? fmtDate(start) : "Not set"],
-                ["Time", start && end ? `${fmtTime(start)} to ${fmtTime(end)}` : "Not set"],
-                ["Length", `${duration} minutes`],
-                ["Invite to", email || "Not set"],
-              ].map(([label, value]) => (
-                <div key={label} className="py-2.5 first:pt-0 last:pb-0">
-                  <dt className="text-xs text-[#6B6F76]">{label}</dt>
-                  <dd className="mt-0.5 break-words font-bold">{value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <p className="mt-4 text-xs text-[#6B6F76]">
-              Meet link is created on submit. Times are in Philippine Time (UTC+8).
-            </p>
-          </aside>
-        </div>
+          </div>
+        </form>
       )}
 
       {/* DELETE CONFIRMATION */}
@@ -704,18 +690,18 @@ export default function ApplicantInterview() {
             aria-modal="true"
             aria-labelledby="iv-del-title"
             aria-describedby="iv-del-desc"
-            className="archivo w-full max-w-sm rounded-lg border border-[#E3E0D8] bg-white p-6 shadow-xl"
+            className="archivo w-full max-w-sm rounded-lg border border-[#E3E0D8] bg-white p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="iv-del-title" className="text-lg font-bold text-[#991B1B]">
+            <h3 id="iv-del-title" className="text-base font-bold">
               Delete this meeting?
             </h3>
-            <p id="iv-del-desc" className="mt-2 text-sm text-[#6B6F76]">
+            <p id="iv-del-desc" className="mt-2 text-sm leading-relaxed text-[#6B6F76]">
               The event is removed from your Google Calendar and {applicantName} gets a cancellation
               email. This can't be undone. You can schedule a new meeting afterwards.
             </p>
 
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 className={btnSecondary}

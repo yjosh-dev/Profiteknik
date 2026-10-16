@@ -105,19 +105,18 @@ export default function AuthProvider({
       return;
     }
 
+    setLoading(true); // so route guards wait instead of redirecting
+
     switch (verifyType) {
       case "root":
-        verifyRoot(token);
+        await verifyRoot(token);
         break;
-
       case "employee":
-        verifyEmployee(token);
+        await verifyEmployee(token);
         break;
-
       case "applicant":
-        verifyApplicant(token);
+        await verifyApplicant(token);
         break;
-
       default:
         setLoading(false);
         setUnauthenticated(true);

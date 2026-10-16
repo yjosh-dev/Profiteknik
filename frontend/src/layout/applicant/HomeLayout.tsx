@@ -21,6 +21,59 @@ const STORAGE_URL =
 const CapitalizeFirst = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1);
 
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+export type AppNotification = {
+  id: number | string;
+  title: string;
+  message: string;
+  created_at: string; // ISO string
+  read: boolean;
+  link?: string; // optional route to open when clicked
+};
+
+const timeAgo = (iso: string) => {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// TODO: remove this sample data and load real notifications from your API
+const minutesAgo = (m: number) =>
+  new Date(Date.now() - m * 60 * 1000).toISOString();
+
+const SAMPLE_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 1,
+    title: "Interview scheduled",
+    message: "Your interview for Software Engineer has been scheduled.",
+    created_at: minutesAgo(5),
+    read: false,
+  },
+  {
+    id: 2,
+    title: "Application viewed",
+    message: "An employer viewed your application.",
+    created_at: minutesAgo(120),
+    read: false,
+  },
+  {
+    id: 3,
+    title: "Welcome to Profiteknik",
+    message: "Complete your profile to get better job matches.",
+    created_at: minutesAgo(60 * 48),
+    read: true,
+  },
+];
+
 export default function HomeLayout() {
   return (
     <div className="w-dvw h-dvh flex flex-col">
@@ -34,8 +87,15 @@ export default function HomeLayout() {
 
 function Navbar() {
   const [activeTab, setActiveTab] = useState("Home");
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Only one dropdown can be open at a time
+  const [openMenu, setOpenMenu] = useState<"notifications" | "profile" | null>(
+    null,
+  );
+  const [notifications, setNotifications] = useState<AppNotification[]>(
+    SAMPLE_NOTIFICATIONS,
+  );
   const menuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
 
@@ -46,6 +106,9 @@ function Navbar() {
 
   const currentUser = auth?.userData?.userData;
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const hasUnread = unreadCount > 0;
+
   const navItems = [
     { title: "Home", path: "" },
     { title: "Jobs", path: "job_wall" },
@@ -53,17 +116,18 @@ function Navbar() {
     { title: "Career", path: "careers" },
   ];
 
-  // Close the profile menu on outside click or Escape
+  // Close the open dropdown on outside click or Escape
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!openMenu) return;
 
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+      const ref = openMenu === "profile" ? menuRef : notifRef;
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpenMenu(null);
       }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") setOpenMenu(null);
     };
 
     document.addEventListener("mousedown", handleClick);
@@ -72,13 +136,26 @@ function Navbar() {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleKey);
     };
-  }, [menuOpen]);
+  }, [openMenu]);
+
+  const markAsRead = (id: AppNotification["id"]) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+    // TODO: call your API to mark this notification as read
+  };
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    // TODO: call your API to mark all notifications as read
+  };
 
   const handleLogout = async () => {
     const verifyType = localStorage.getItem("verify_type") ?? "applicant";
     localStorage.removeItem("token");
     localStorage.removeItem("verify_type");
     auth?.setUserData(null);
+    setNotifications([]);
     // With no token, checkAuth marks the user as unauthenticated
     await auth?.checkAuth(verifyType);
     navigate("/applicant");
@@ -129,13 +206,54 @@ function Navbar() {
               <div className="w-36 h-10 rounded-xl bg-zinc-200 animate-pulse" />
             ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  aria-label="Notifications"
-                  className="p-2 rounded-full text-zinc-600 hover:bg-red-100 hover:text-red-500 transition-colors cursor-pointer"
-                >
-                  <IoNotificationsOutline size={24} />
-                </button>
+                {/* Notifications + dropdown */}
+                <div ref={notifRef} className="relative">
+                  <button
+                    type="button"
+                    aria-label={
+                      hasUnread
+                        ? `Notifications, ${unreadCount} unread`
+                        : "Notifications"
+                    }
+                    aria-haspopup="menu"
+                    aria-expanded={openMenu === "notifications"}
+                    onClick={() =>
+                      setOpenMenu((open) =>
+                        open === "notifications" ? null : "notifications",
+                      )
+                    }
+                    className={`relative p-2 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors cursor-pointer ${
+                      openMenu === "notifications"
+                        ? "bg-red-100 text-red-500"
+                        : "text-zinc-600"
+                    }`}
+                  >
+                    <IoNotificationsOutline size={24} />
+
+                    {/* Unread indicator */}
+                    {hasUnread && (
+                      <span className="absolute top-1.5 right-2 flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white" />
+                      </span>
+                    )}
+                  </button>
+
+                  {openMenu === "notifications" && (
+                    <NotificationDropdown
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      onMarkRead={markAsRead}
+                      onMarkAllRead={markAllAsRead}
+                      onOpen={(n) => {
+                        markAsRead(n.id);
+                        setOpenMenu(null);
+                        if (n.link) navigate(n.link);
+                      }}
+                    />
+                  )}
+                </div>
+
                 <NavLink
                   to="conversations"
                   aria-label="Messages"
@@ -156,21 +274,27 @@ function Navbar() {
                     type="button"
                     aria-label="Profile"
                     aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    onClick={() => setMenuOpen((open) => !open)}
+                    aria-expanded={openMenu === "profile"}
+                    onClick={() =>
+                      setOpenMenu((open) =>
+                        open === "profile" ? null : "profile",
+                      )
+                    }
                     className={`p-2 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors cursor-pointer ${
-                      menuOpen ? "bg-red-100 text-red-500" : "text-zinc-600"
+                      openMenu === "profile"
+                        ? "bg-red-100 text-red-500"
+                        : "text-zinc-600"
                     }`}
                   >
                     <IoPersonCircleOutline size={28} />
                   </button>
 
-                  {menuOpen && (
+                  {openMenu === "profile" && (
                     <DropdownMenu
                       user={currentUser?.name}
                       role={currentUser?.role}
                       profile_image={currentUser?.profile_image}
-                      onClose={() => setMenuOpen(false)}
+                      onClose={() => setOpenMenu(null)}
                       onLogout={handleLogout}
                       onViewProfile={() => navigate(PROFILE_PATH)}
                     />
@@ -191,6 +315,111 @@ function Navbar() {
     </header>
   );
 }
+
+/* =========================================================
+   NOTIFICATION DROPDOWN
+========================================================= */
+
+type NotificationDropdownProps = {
+  notifications: AppNotification[];
+  unreadCount: number;
+  onOpen: (notification: AppNotification) => void;
+  onMarkRead: (id: AppNotification["id"]) => void;
+  onMarkAllRead: () => void;
+};
+
+function NotificationDropdown({
+  notifications,
+  unreadCount,
+  onOpen,
+  onMarkAllRead,
+}: NotificationDropdownProps) {
+  return (
+    <div
+      role="menu"
+      className="w-80 max-w-[calc(100vw-2rem)] bg-[#FAF9F6] border border-[#E3E0D8] rounded-xl shadow-lg absolute top-12 right-0 z-50 overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h3 className="archivo text-sm font-bold text-[#1C2321]">
+            Notifications
+          </h3>
+          {unreadCount > 0 && (
+            <span className="archivo px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold">
+              {unreadCount} new
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onMarkAllRead}
+          disabled={unreadCount === 0}
+          className="archivo text-xs font-semibold text-[#991B1B] hover:underline disabled:text-[#6B6F76] disabled:no-underline disabled:cursor-not-allowed cursor-pointer"
+        >
+          Mark all as read
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="max-h-80 overflow-y-auto px-2 pb-2">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-[#6B6F76]">
+            <div className="w-11 h-11 rounded-full bg-[#F1EFE9] flex items-center justify-center">
+              <IoNotificationsOutline size={20} />
+            </div>
+            <p className="archivo text-sm">You're all caught up</p>
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {notifications.map((n) => (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => onOpen(n)}
+                  className={`w-full text-left flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors cursor-pointer ${
+                    n.read
+                      ? "hover:bg-[#F1EFE9]"
+                      : "bg-[#FDF2F2] hover:bg-[#FBE7E7]"
+                  }`}
+                >
+                  {/* Unread dot */}
+                  <span
+                    className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                      n.read ? "bg-transparent" : "bg-red-600"
+                    }`}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`archivo text-sm text-[#1C2321] truncate ${
+                        n.read ? "font-medium" : "font-bold"
+                      }`}
+                    >
+                      {n.title}
+                    </p>
+                    <p className="archivo text-xs text-[#6B6F76] leading-relaxed line-clamp-2">
+                      {n.message}
+                    </p>
+                    <p className="archivo text-[11px] text-[#6B6F76]/80 mt-1">
+                      {timeAgo(n.created_at)}
+                    </p>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   PROFILE DROPDOWN
+========================================================= */
 
 type DropdownMenuProps = {
   user?: string;

@@ -56,6 +56,10 @@ Route::prefix('/employee')->group(function () {
     Route::post('/screen-applicant/{applicationId}/interview', [InterviewScheduleController::class, 'store'])->middleware('auth:sanctum');
     Route::get('/screen-applicant/{applicationId}/interview', [InterviewScheduleController::class, 'show'])->middleware('auth:sanctum');
     Route::delete('/interview/{id}', [InterviewScheduleController::class, 'destroy'])->middleware('auth:sanctum');
+    Route::get('/interviews', [InterviewScheduleController::class, 'index'])->middleware('auth:sanctum');
+    Route::get('/jobs/{job}/interviews', [InterviewScheduleController::class, 'indexForJob'])
+        ->whereNumber('job')
+        ->middleware('auth:sanctum');
 });
 
 //  ------------- G O O G L E  -----------------

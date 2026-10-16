@@ -6,6 +6,8 @@ import { applicantApplicationService } from "../../service/api/applicants/applic
 import JobDetailPanel from "../../components/common/JobDetail";
 import type { JobDetail } from "../../types/JobDetailType";
 
+import logo from "../../assets/logo/profiteknik_logo_only.svg";
+
 export default function Apply() {
   const { job_id } = useParams<{ job_id: string }>();
   const navigate = useNavigate();
@@ -63,7 +65,8 @@ export default function Apply() {
 
       // Map answer values directly into an array of strings
       const screeningAnswersArray =
-        job?.screening_questions?.map((q) => answers[q.question_id] || "") || [];
+        job?.screening_questions?.map((q) => answers[q.question_id] || "") ||
+        [];
 
       const payload = {
         screening_answers: screeningAnswersArray,
@@ -117,13 +120,16 @@ export default function Apply() {
     <div className="w-screen h-screen bg-zinc-100 flex flex-col overflow-hidden font-sans">
       {/* Top Header Bar */}
       <header className="bg-white border-b border-zinc-200 px-6 py-3.5 flex justify-between items-center shrink-0 shadow-xs">
-        <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">
-            Job Application
-          </p>
-          <h1 className="font-semibold text-lg text-zinc-800 leading-tight">
-            {job.job_title}
-          </h1>
+        <div className="flex gap-2">
+          <img src={logo} className="w-10 h-10" />
+          <div className="">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">
+              Job Application
+            </p>
+            <h1 className="font-semibold text-lg text-zinc-800 leading-tight">
+              {job.job_title}
+            </h1>
+          </div>
         </div>
         <button
           type="button"

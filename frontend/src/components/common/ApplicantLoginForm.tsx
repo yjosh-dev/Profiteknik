@@ -89,7 +89,7 @@ export default function ApplicantLoginForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const {checkAuth} = UseAuth();
+  const { checkAuth } = UseAuth();
 
   const navigate = useNavigate();
 
@@ -111,9 +111,9 @@ export default function ApplicantLoginForm() {
       const result = await ApplicantAuth.login(formData);
       localStorage.setItem("token", result.data.token);
       localStorage.setItem("verify_type", "applicant");
+      await checkAuth("applicant");
       setSuccess(true);
-      checkAuth("applicant");
-      navigate("/applicant/profile")
+      navigate("/applicant/profile");
     } catch (err) {
       const fallback = "Something went wrong. Please try again.";
       if (axios.isAxiosError(err)) {

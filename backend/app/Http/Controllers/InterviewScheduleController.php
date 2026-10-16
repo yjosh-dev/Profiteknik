@@ -7,6 +7,7 @@ use App\Models\EmployeeAccount;
 use App\Models\InterviewSchedule;
 use App\Services\GoogleMeetService;
 use Carbon\Carbon;
+use Google\Service\Exception;
 use Illuminate\Http\Request;
 
 class InterviewScheduleController extends Controller
@@ -15,6 +16,39 @@ class InterviewScheduleController extends Controller
     private const INTERVIEW_STATUS = 'interview';
 
     public function __construct(private GoogleMeetService $google) {}
+
+    public function index(Request $request)
+    {
+        $user = $this->employee($request);
+
+        $rows = InterviewSchedule::with(['application.information', 'application.jobListing'])
+            ->whereHas('application')                    // skip orphaned rows
+            ->where('scheduled_by', $user->getKey())     // remove to show everyone's meetings
+            ->orderBy('starts_at')
+            ->get()
+            ->map(function ($s) {
+                $app = $s->application;
+                $info = $app->information;
+                $job = $app->jobListing;
+
+                $name = trim(($info->first_name ?? '').' '.($info->last_name ?? ''));
+
+                return [
+                    'id' => $s->id,
+                    'application_id' => $s->application_id,
+                    'applicant_id' => $app->applicant_id,
+                    'applicant_name' => $name !== '' ? $name : ($s->applicant_email ?? 'Applicant'),
+                    'applicant_email' => $s->applicant_email,
+                    'job_title' => $job->job_title ?? $job->title ?? null,
+                    'title' => $s->title,
+                    'meet_link' => $s->meet_link,
+                    'starts_at' => $s->starts_at,
+                    'ends_at' => $s->ends_at,
+                ];
+            });
+
+        return response()->json(['data' => $rows]);
+    }
 
     private function employee(Request $request): EmployeeAccount
     {
@@ -71,7 +105,7 @@ class InterviewScheduleController extends Controller
                 'code' => 'needs_google',
                 'needs_google' => true,
             ], 409);
-        } catch (\Google\Service\Exception $e) {
+        } catch (Exception $e) {
             report($e);
 
             return response()->json(['message' => 'Google could not create the event.'], 502);
@@ -124,7 +158,7 @@ class InterviewScheduleController extends Controller
             }
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage(), 'needs_google' => true], 409);
-        } catch (\Google\Service\Exception $e) {
+        } catch (Exception $e) {
             report($e);
 
             return response()->json(['message' => 'Google could not delete the event.'], 502);
@@ -133,5 +167,28 @@ class InterviewScheduleController extends Controller
         $schedule->delete();
 
         return response()->json(['message' => 'Interview cancelled.']);
+    }
+
+    public function indexForJob(Request $request, int $jobId)
+    {
+        $this->employee($request);
+
+        $rows = InterviewSchedule::with('application.applicant')
+            ->whereHas('application', fn ($q) => $q->where('job_id', $jobId))
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'application_id' => $s->application_id,
+                'applicant_id' => $s->application->applicant_id,
+                'applicant_name' => $s->application->applicant->full_name ?? 'Applicant',
+                'applicant_email' => $s->applicant_email,
+                'title' => $s->title,
+                'meet_link' => $s->meet_link,
+                'starts_at' => $s->starts_at,
+                'ends_at' => $s->ends_at,
+            ]);
+
+        return response()->json(['data' => $rows]);
     }
 }
