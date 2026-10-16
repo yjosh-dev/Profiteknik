@@ -10,12 +10,14 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
   ],
-  preview: {
-    allowedHosts: ["beautiful-compassion-production-8684.up.railway.app"],
-  },
+
   server: {
     proxy: {
       "/storage": "http://localhost:8000",
     },
+  },
+
+  preview: {
+    allowedHosts: ["beautiful-compassion-production-8684.up.railway.app"],
   },
 });
