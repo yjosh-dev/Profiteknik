@@ -38,7 +38,9 @@ class ScreenApplicantController extends Controller
         $screeningQA = $this->service->getFormattedScreeningQA($details);
 
         // Resume file embedded as base64 (private disk)
-        $resumeData = $this->service->getResumePayload($details->applicant->resume);
+        $resumeData = $this->service->getResumePayload(
+            $details->applicant->resume
+        );
 
         return response()->json([
             'data' => [
@@ -46,6 +48,16 @@ class ScreenApplicantController extends Controller
                 'job_id' => $details->job_id,
                 'status' => $details->status ?? 'Pending',
                 'date_applied' => $details->date_applied,
+
+                'job' => [
+                    'job_id' => $details->jobListing->job_id,
+                    'job_title' => $details->jobListing->job_title,
+
+                    'requirements' => $details->jobListing->requirements,
+
+                    'skill_requirements' => $details->jobListing->skillRequirement,
+                ],
+
                 'applicant' => [
                     'applicant_id' => $details->applicant->applicant_id,
                     'first_name' => $details->applicant->information->first_name ?? null,
@@ -59,6 +71,7 @@ class ScreenApplicantController extends Controller
                     'skills' => $details->applicant->skills,
                     'resume' => $resumeData,
                 ],
+
                 'screening_qa' => $screeningQA,
             ],
         ], 200);

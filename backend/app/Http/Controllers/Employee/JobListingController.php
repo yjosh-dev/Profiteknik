@@ -56,11 +56,17 @@ class JobListingController extends Controller
             'employment_type' => 'required|string|max:100',
             'posted_at' => 'nullable|date',
             'posted_until' => 'nullable|date|after_or_equal:posted_at',
+
             'requirements' => 'required|array',
             'requirements.highest_education' => 'nullable|string|max:255',
             'requirements.experience' => 'required|integer|min:0',
+
             'screening_questions' => 'nullable|array',
             'screening_questions.*.screening_question' => 'nullable|string|max:1000',
+
+            // Skills
+            'skills' => 'nullable|array',
+            'skills.*' => 'string|max:255',
         ]);
 
         try {

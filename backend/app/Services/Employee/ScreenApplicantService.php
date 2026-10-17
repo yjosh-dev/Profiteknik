@@ -2,13 +2,11 @@
 
 namespace App\Services\Employee;
 
+use App\Mail\ApplicationStatusMail;
 use App\Models\ApplicantJobApplication;
 use App\Models\ApplicantResume;
-use Illuminate\Support\Facades\Storage;
-use App\Mail\ApplicationStatusMail;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class ScreenApplicantService
 {
@@ -23,7 +21,11 @@ class ScreenApplicantService
             'applicant.experiences',
             'applicant.skills',
             'applicant.resume',
+
             'jobListing.screeningQuestions',
+            'jobListing.requirements',
+            'jobListing.skillRequirement',
+
             'screeningAnswers',
         ])
             ->where('job_id', $jobId)

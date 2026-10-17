@@ -53,6 +53,19 @@ class JobListingService
                 }
             }
 
+            // 4. Create Job Skill Requirements (one row per skill name)
+            if (! empty($data['skills'])) {
+                $skills = collect($data['skills'])
+                    ->map(fn ($skill) => trim($skill))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->map(fn ($skill) => ['skills' => $skill])
+                    ->all();
+
+                $jobListing->skillRequirement()->createMany($skills);
+            }
+
             return $jobListing;
         });
     }

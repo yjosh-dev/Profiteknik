@@ -52,4 +52,9 @@ class JobListing extends Model
     {
         return $this->hasMany(ApplicantJobApplication::class, 'job_id', 'job_id');
     }
+
+    public function skillRequirement(): HasMany
+    {
+        return $this->hasMany(JobSkillRequirement::class, 'job_id', 'job_id');
+    }
 }
