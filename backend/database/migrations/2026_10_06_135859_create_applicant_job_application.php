@@ -6,15 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('applicant_job_applications', function (Blueprint $table) {
-            $table->id('application_id');
+        Schema::create('applicant_notification', function (Blueprint $table) {
+            $table->integer('record_id')->primary();
+
             $table->unsignedInteger('applicant_id');
-            $table->unsignedBigInteger('job_id');
+
+            $table->unsignedBigInteger('job_id')->nullable();
+
+            $table->unsignedBigInteger('application_id')->nullable();
+
+            $table->string('notification_title');
+            $table->string('notification_body');
+
+            $table->dateTime('date_created');
+
+            $table->boolean('active')->default(true);
 
             $table->foreign('applicant_id')
                 ->references('applicant_id')
@@ -24,19 +32,17 @@ return new class extends Migration
             $table->foreign('job_id')
                 ->references('job_id')
                 ->on('job_listing')
-                ->onDelete('cascade');
+                ->nullOnDelete();
 
-            $table->string('status')->default('pending');
-            $table->date('date_applied');
-            $table->unique(['applicant_id', 'job_id']);
+            $table->foreign('application_id')
+                ->references('application_id')
+                ->on('applicant_job_applications')
+                ->nullOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('applicant_job_applications');
+        Schema::dropIfExists('applicant_notification');
     }
 };

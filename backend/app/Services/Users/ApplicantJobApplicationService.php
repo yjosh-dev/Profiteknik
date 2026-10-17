@@ -3,6 +3,7 @@
 namespace App\Services\Users;
 
 use App\Models\ApplicantJobApplication;
+use App\Models\ApplicantNotification;
 use App\Models\JobListing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,17 @@ class ApplicantJobApplicationService
                     'screening_question' => $answer,
                 ]);
             }
+
+            // Create notification for the applicant
+            ApplicantNotification::create([
+                'applicant_id' => $applicantId,
+                'job_id' => $job->job_id,
+                'application_id' => $application->application_id,
+                'notification_title' => 'Application Submitted',
+                'notification_body' => "Your application for {$job->job_title} has been successfully submitted.",
+                'date_created' => now(),
+                'active' => true,
+            ]);
 
             return $application->load('screeningAnswers');
         });

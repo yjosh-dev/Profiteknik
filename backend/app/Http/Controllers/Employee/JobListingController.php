@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\JobListing;
 use App\Services\Employee\JobListingService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class JobListingController extends Controller
 {
@@ -56,17 +58,11 @@ class JobListingController extends Controller
             'employment_type' => 'required|string|max:100',
             'posted_at' => 'nullable|date',
             'posted_until' => 'nullable|date|after_or_equal:posted_at',
-
             'requirements' => 'required|array',
             'requirements.highest_education' => 'nullable|string|max:255',
             'requirements.experience' => 'required|integer|min:0',
-
             'screening_questions' => 'nullable|array',
             'screening_questions.*.screening_question' => 'nullable|string|max:1000',
-
-            // Skills
-            'skills' => 'nullable|array',
-            'skills.*' => 'string|max:255',
         ]);
 
         try {
@@ -86,13 +82,136 @@ class JobListingController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id): JsonResponse
     {
         $data = JobListing::where('job_id', $id)
-            ->with(['requirements', 'screeningQuestions'])
+            ->with([
+                'requirements',
+                'screeningQuestions',
+            ])
             ->firstOrFail();
 
-        return $data;
+        $applications = $data->applications();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Overall Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        $totalApplicants = (clone $applications)->count();
+
+        $shortlisted = (clone $applications)
+            ->where('status', 'shortlisted')
+            ->count();
+
+        $underReview = (clone $applications)
+            ->where('status', 'pending')
+            ->count();
+
+        $rejected = (clone $applications)
+            ->where('status', 'rejected')
+            ->count();
+
+        $interview = (clone $applications)
+            ->where('status', 'interview')
+            ->count();
+
+        $completed = (clone $applications)
+            ->where('status', 'completed')
+            ->count();
+
+        $conversionRate = $totalApplicants > 0
+            ? round(($shortlisted / $totalApplicants) * 100, 2)
+            : 0;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Weekly Applicants
+        |--------------------------------------------------------------------------
+        */
+
+        $weekStart = now()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = now()->endOfWeek(Carbon::SUNDAY);
+
+        $weeklyApplications = (clone $applications)
+            ->whereBetween('date_applied', [
+                $weekStart->toDateString(),
+                $weekEnd->toDateString(),
+            ])
+            ->select(
+                'date_applied',
+                DB::raw('COUNT(*) as count')
+            )
+            ->whereNotNull('date_applied')
+            ->groupBy('date_applied')
+            ->orderBy('date_applied')
+            ->get()
+            ->keyBy(function ($application) {
+                return Carbon::parse(
+                    $application->date_applied
+                )->toDateString();
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Always Generate Monday → Sunday
+        |--------------------------------------------------------------------------
+        */
+
+        $applicantsPerDay = collect();
+
+        $date = $weekStart->copy();
+
+        while ($date->lte($weekEnd)) {
+
+            $dateKey = $date->toDateString();
+
+            $count = $weeklyApplications->has($dateKey)
+                ? (int) $weeklyApplications->get($dateKey)->count
+                : 0;
+
+            $applicantsPerDay->push([
+                'date' => $dateKey,
+                'day' => $date->format('D'),
+                'count' => $count,
+            ]);
+
+            $date->addDay();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'job_id' => $data->job_id,
+            'job_title' => $data->job_title,
+            'job_description' => $data->job_description,
+            'minimum_salary' => $data->minimum_salary,
+            'maximum_salary' => $data->maximum_salary,
+            'vacant_position' => $data->vacant_position,
+            'employment_type' => $data->employment_type,
+            'posted_at' => $data->posted_at,
+            'posted_until' => $data->posted_until,
+
+            'requirements' => $data->requirements,
+
+            'screeningQuestions' => $data->screeningQuestions,
+
+            'analytics' => [
+                'total_applicants' => $totalApplicants,
+                'shortlisted' => $shortlisted,
+                'under_review' => $underReview,
+                'rejected' => $rejected,
+                'interview' => $interview,
+                'completed' => $completed,
+                'conversion_rate' => $conversionRate,
+                'applicants_per_day' => $applicantsPerDay->values(),
+            ],
+        ]);
     }
 
     /**

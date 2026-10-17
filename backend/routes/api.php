@@ -16,6 +16,8 @@ use App\Http\Controllers\Users\ApplicantDataController;
 use App\Http\Controllers\Users\ApplicantJobApplicationController;
 use App\Http\Controllers\Users\ApplicantJobListingController;
 use App\Http\Controllers\Users\ApplicantMyJobsController;
+use App\Http\Controllers\Users\ApplicantNotificationController;
+use App\Http\Controllers\Users\ApplicationTrackingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -92,13 +94,21 @@ Route::prefix('/applicant')->group(function () {
         });
 
     Route::middleware('auth:sanctum')->group(function () {
-
+        Route::controller(ApplicantNotificationController::class)->group(function () {
+            Route::get('/notifications', 'index');
+            Route::patch('/notifications/{recordId}/deactivate', 'deactivate');
+            Route::delete('/notifications/{recordId}', 'destroy');
+        });
         Route::controller(ApplicantMyJobsController::class)->group(function () {
             Route::get('my-jobs/pending', 'fetchPendingApplications');
             Route::get('my-jobs/shortlisted', 'fetchShortlistedApplications');
             Route::get('my-jobs/interview', 'fetchInterviewApplications');
 
         });
+        Route::get(
+            '/application/{applicationId}/tracking',
+            [ApplicationTrackingController::class, 'show']
+        )->whereNumber('applicationId');
     });
 
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {

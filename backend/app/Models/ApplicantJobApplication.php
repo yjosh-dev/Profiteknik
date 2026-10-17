@@ -50,4 +50,9 @@ class ApplicantJobApplication extends Model
     {
         return $this->hasOne(ApplicantContact::class, 'applicant_id', 'applicant_id');
     }
+
+    public function interview(): HasMany
+    {
+        return $this->hasMany(InterviewSchedule::class, 'application_id');
+    }
 }
