@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import {
@@ -6,15 +6,15 @@ import {
   FaXmark,
   FaChevronLeft,
   FaChevronRight,
-  FaEnvelope,
-  FaPhone,
   FaBriefcase,
-  FaRegCalendar,
   FaInbox,
 } from "react-icons/fa6";
 
 import { applicantScreeningService } from "../../../service/api/employee/applicantScreeningService";
-import MatchScoreCard from "../../../components/common/MatchScoreCard";
+import MatchScoreCard, {
+  MOCK_MATCH_SCENARIOS,
+  type MatchInput,
+} from "../../../components/common/MatchScoreCard";
 
 // Required for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -55,6 +55,7 @@ export interface Applicant {
   tel_no?: string | null;
   experiences: Experience[];
   skills: Skill[];
+  education?: string | null; // e.g. "High School Graduate"
   resume?: Resume | null;
 }
 
@@ -64,6 +65,26 @@ export interface ScreeningQA {
   answer_text: string;
 }
 
+// What the job asks for (matches the `job` object in the screening response)
+export interface JobSkillRequirement {
+  record_id: number;
+  job_id: number;
+  skills: string; // the skill name
+}
+
+export interface JobRequirements {
+  job_id: number;
+  highest_education: string; // e.g. "High School"
+  experience: number; // required years
+}
+
+export interface ScreeningJob {
+  job_id: number;
+  job_title: string;
+  requirements?: JobRequirements | null;
+  skill_requirements: JobSkillRequirement[];
+}
+
 export interface ScreeningData {
   application_id: number;
   job_id: number;
@@ -71,19 +92,12 @@ export interface ScreeningData {
   date_applied: string;
   applicant: Applicant;
   screening_qa: ScreeningQA[];
+  job?: ScreeningJob | null;
 }
 
 /* =========================================================
    HELPERS
 ========================================================= */
-
-// TODO: replace with real scores from your API
-const PLACEHOLDER_SCORES = [
-  { label: "Skills", score: 85 },
-  { label: "Experience", score: 60 },
-  { label: "Education", score: 90 },
-  { label: "Questions", score: 75 },
-];
 
 const formatDate = (value?: string | null) =>
   value
@@ -94,16 +108,61 @@ const formatDate = (value?: string | null) =>
       })
     : "";
 
-const getInitials = (first: string, last: string) =>
-  `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase();
+// Rough ranking so "College Graduate" meets "High School Graduate".
+// Order matters: more specific phrases come first. If you'd rather not guess
+// from text, have the backend return a boolean instead.
+const EDUCATION_RANKS: [string, number][] = [
+  ["doctor", 7],
+  ["phd", 7],
+  ["master", 6],
+  ["bachelor", 5],
+  ["college", 5],
+  ["associate", 4],
+  ["vocational", 4],
+  ["tesda", 4],
+  ["senior high", 3],
+  ["high school", 2],
+  ["secondary", 2],
+  ["elementary", 1],
+  ["primary", 1],
+];
 
-const getStatusStyle = (status: string) => {
-  const s = status.toLowerCase();
-  if (["hired", "accepted", "approved", "shortlisted"].includes(s))
-    return "bg-green-50 text-green-700";
-  if (["rejected", "declined"].includes(s)) return "bg-red-50 text-red-700";
-  return "bg-amber-50 text-amber-700";
+const educationRank = (value?: string | null) => {
+  const text = (value ?? "").toLowerCase();
+  return EDUCATION_RANKS.find(([key]) => text.includes(key))?.[1] ?? 0;
 };
+
+const MS_PER_YEAR = 1000 * 60 * 60 * 24 * 365.25;
+
+// Total years worked. Overlapping jobs are merged so they aren't counted
+// twice, an empty end_date means "still working", and future dates are
+// capped at today.
+function calculateYearsOfExperience(experiences: Experience[]): number {
+  const now = Date.now();
+
+  const ranges = experiences
+    .map((e) => ({
+      start: new Date(e.start_date).getTime(),
+      end: Math.min(e.end_date ? new Date(e.end_date).getTime() : now, now),
+    }))
+    .filter((r) => !Number.isNaN(r.start) && !Number.isNaN(r.end) && r.end > r.start)
+    .sort((a, b) => a.start - b.start);
+
+  let totalMs = 0;
+  let current: { start: number; end: number } | null = null;
+
+  for (const r of ranges) {
+    if (!current) current = { ...r };
+    else if (r.start <= current.end) current.end = Math.max(current.end, r.end);
+    else {
+      totalMs += current.end - current.start;
+      current = { ...r };
+    }
+  }
+  if (current) totalMs += current.end - current.start;
+
+  return Math.round((totalMs / MS_PER_YEAR) * 10) / 10;
+}
 
 /* =========================================================
    SHARED UI
@@ -121,61 +180,52 @@ function EmptyState({ message }: { message: string }) {
 }
 
 /* =========================================================
-   APPLICANT HEADER
+   SCORE SELECTOR (1-5)
 ========================================================= */
 
-
-/* =========================================================
-   SCORE GAUGE
-========================================================= */
-
-interface ScoreGaugeProps {
-  score: number;
-  label: string;
+interface ScoreSelectorProps {
+  value?: number;
+  onChange: (score: number | undefined) => void;
 }
 
-function ScoreGauge({ score, label }: ScoreGaugeProps) {
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  const progress = circumference - (score / 100) * circumference;
-
+function ScoreSelector({ value, onChange }: ScoreSelectorProps) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative w-20 h-20">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke="#E8E6E0"
-            strokeWidth="8"
-          />
-
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke="#991B1B"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={progress}
-            className="transition-all duration-700 ease-out"
-          />
-        </svg>
-
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="archivo text-lg font-bold text-[#1C2321]">
-            {score}%
-          </span>
-        </div>
+    <div className="mt-4 ml-10">
+      <div className="flex items-center justify-between mb-2">
+        <p className="archivo text-[11px] font-bold uppercase tracking-wide text-[#6B6F76]">
+          Your score
+        </p>
+        <p className="archivo text-[11px] text-[#6B6F76]">
+          1 = Poor · 5 = Excellent
+        </p>
       </div>
 
-      <span className="archivo text-xs font-bold uppercase tracking-wide text-[#6B6F76]">
-        {label}
-      </span>
+      <div
+        className="flex items-center gap-2"
+        role="radiogroup"
+        aria-label="Score"
+      >
+        {[1, 2, 3, 4, 5].map((n) => {
+          const isSelected = value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              // clicking the selected score again clears it
+              onClick={() => onChange(isSelected ? undefined : n)}
+              className={`archivo flex-1 h-10 rounded-lg text-sm font-bold transition-colors cursor-pointer ${
+                isSelected
+                  ? "bg-[#991B1B] text-white"
+                  : "bg-white text-[#1C2321] hover:bg-[#F0EEEA]"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -186,9 +236,15 @@ function ScoreGauge({ score, label }: ScoreGaugeProps) {
 
 interface QuestionnaireViewProps {
   screeningQa: ScreeningQA[];
+  scores: Record<number, number>;
+  onScoreChange: (questionId: number, score: number | undefined) => void;
 }
 
-function QuestionnaireView({ screeningQa }: QuestionnaireViewProps) {
+function QuestionnaireView({
+  screeningQa,
+  scores,
+  onScoreChange,
+}: QuestionnaireViewProps) {
   if (!screeningQa.length) {
     return <EmptyState message="No screening questions found." />;
   }
@@ -196,10 +252,7 @@ function QuestionnaireView({ screeningQa }: QuestionnaireViewProps) {
   return (
     <div className="space-y-4">
       {screeningQa.map((item, index) => (
-        <div
-          key={item.question_id}
-          className="bg-[#FAF9F6] rounded-xl p-5"
-        >
+        <div key={item.question_id} className="bg-[#FAF9F6] rounded-xl p-5">
           <div className="flex items-start gap-3">
             <span className="archivo w-7 h-7 rounded-full bg-[#991B1B]/10 text-[#991B1B] text-xs font-bold flex items-center justify-center shrink-0">
               {index + 1}
@@ -223,6 +276,11 @@ function QuestionnaireView({ screeningQa }: QuestionnaireViewProps) {
               )}
             </p>
           </div>
+
+          <ScoreSelector
+            value={scores[item.question_id]}
+            onChange={(score) => onScoreChange(item.question_id, score)}
+          />
         </div>
       ))}
     </div>
@@ -265,8 +323,7 @@ function ResumeView({ resume }: ResumeViewProps) {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsModalOpen(false);
-      if (e.key === "ArrowLeft")
-        setPageNumber((c) => Math.max(c - 1, 1));
+      if (e.key === "ArrowLeft") setPageNumber((c) => Math.max(c - 1, 1));
       if (e.key === "ArrowRight")
         setPageNumber((c) => Math.min(c + 1, numPages || 1));
     };
@@ -599,6 +656,72 @@ export default function ApplicantEvaluation() {
   const [activeTab, setActiveTab] = useState("questionnaire");
 
   /* =======================================================
+     QUESTION SCORES (employee ratings, 1-5 per question)
+  ======================================================= */
+
+  const [questionScores, setQuestionScores] = useState<Record<number, number>>(
+    {},
+  );
+
+  const handleScoreChange = (questionId: number, score: number | undefined) => {
+    setQuestionScores((prev) => {
+      const next = { ...prev };
+      if (score === undefined) delete next[questionId];
+      else next[questionId] = score;
+      return next;
+    });
+  };
+
+  /* =======================================================
+     MATCH INPUT (feeds MatchScoreCard)
+     Hooks must stay above the early returns below.
+  ======================================================= */
+
+  const match: MatchInput = useMemo(() => {
+    const total = applicantData?.screening_qa.length ?? 0;
+    const sum = Object.values(questionScores).reduce((a, b) => a + b, 0);
+    const questions = { total, satisfied: sum / 5 }; // ratings out of 5; unrated = 0
+
+    const job = applicantData?.job;
+    const applicant = applicantData?.applicant;
+
+    // No job or applicant yet: show sample data for the rest
+    if (!job || !applicant) {
+      return { ...MOCK_MATCH_SCENARIOS.highlyQualified, questions };
+    }
+
+    const requiredEducation = job.requirements?.highest_education ?? "";
+    const requiredRank = educationRank(requiredEducation);
+
+    // The response has no applicant education yet, so fall back to sample
+    // data (counts as met) until `applicant.education` is returned.
+    const sampleEducation = MOCK_MATCH_SCENARIOS.highlyQualified.education;
+    const education = applicant.education
+      ? {
+          required: requiredEducation,
+          applicant: applicant.education,
+          met:
+            requiredRank === 0 ||
+            educationRank(applicant.education) >= requiredRank,
+        }
+      : { ...sampleEducation, required: requiredEducation || sampleEducation.required };
+
+    return {
+      skills: {
+        required: job.skill_requirements.map((r) => r.skills),
+        owned: applicant.skills.map((sk) => sk.skill_name),
+      },
+      experience: {
+        requiredYears: Number(job.requirements?.experience ?? 0),
+        applicantYears: calculateYearsOfExperience(applicant.experiences),
+      },
+      education,
+      questions,
+      mandatory: [], // not in the response yet
+    };
+  }, [applicantData, questionScores]);
+
+  /* =======================================================
      FETCH SCREENING DATA
   ======================================================= */
 
@@ -621,6 +744,7 @@ export default function ApplicantEvaluation() {
         );
 
         setApplicantData(response.data.data);
+        setQuestionScores({}); // reset ratings when a different applicant loads
       } catch (err: any) {
         console.error("Failed to fetch screening details:", err);
 
@@ -695,16 +819,11 @@ export default function ApplicantEvaluation() {
   return (
     <div className="w-full">
       {/* =====================================================
-          APPLICANT HEADER
-      ===================================================== */}
-      <div className="mb-6">
-        
-      </div>
-
-      {/* =====================================================
           SCORE SECTION
       ===================================================== */}
-      <MatchScoreCard/>
+      <div className="mb-6">
+        <MatchScoreCard match={match} />
+      </div>
 
       {/* =====================================================
           CONTENT TABS (segmented control, no borders)
@@ -747,7 +866,11 @@ export default function ApplicantEvaluation() {
       ===================================================== */}
       <div>
         {activeTab === "questionnaire" && (
-          <QuestionnaireView screeningQa={applicantData.screening_qa} />
+          <QuestionnaireView
+            screeningQa={applicantData.screening_qa}
+            scores={questionScores}
+            onScoreChange={handleScoreChange}
+          />
         )}
 
         {activeTab === "resume" && <ResumeView resume={applicant.resume} />}

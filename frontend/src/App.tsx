@@ -72,6 +72,7 @@ function App() {
             </Route>
           </Route>
 
+
           {/* APPLICANT */}
           <Route path="/applicant" element={<HomeLayout />}>
             <Route path="" element={<Home />} />
@@ -108,7 +109,6 @@ function App() {
           <Route path="/applicant/signup" element={<ApplicantSignup />} />
           <Route path="/applicant/signin" element={<ApplicantLogin />} />
 
-          <Route path="test" element={<Apply />} />
         </Routes>
       </BrowserRouter>
     </ContextProvider>

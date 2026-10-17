@@ -14,6 +14,10 @@ import { AuthContext } from "../../context/AuthProvider";
 import StatusModal from "../../components/ui/StatusModal";
 import { applicantProfileService } from "../../service/api/applicants/applicantProfileService";
 import { Document, Page, pdfjs } from "react-pdf";
+import SkillPicker, {
+  skillNamesToIds,
+} from "../../components/common/SkillPicker";
+import { SKILLS_DATABASE } from "../../utils/Skills";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -23,7 +27,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 /* ---------- Types ---------- */
 
 type Tab = "resume" | "information" | "contact" | "experience" | "skills";
-type SectionId = "name" | "address" | "contact" | "experience" | "resume";
+type SectionId =
+  | "name"
+  | "address"
+  | "contact"
+  | "experience"
+  | "resume"
+  | "skills";
 
 type Information = {
   first_name: string;
@@ -753,6 +763,35 @@ export default function ApplicantProfile() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [profile_image, setProfile] = useState<any>();
 
+  //skills related
+  const [savedSkillIds, setSavedSkillIds] = useState<number[]>([]);
+  const [skillDraft, setSkillDraft] = useState<number[]>([]);
+
+  const toggleSkill = (id: number) =>
+    setSkillDraft((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+
+  const skillsDirty =
+    [...skillDraft].sort().join() !== [...savedSkillIds].sort().join();
+
+  // TODO: call the real skills endpoint here once it exists
+  const saveSkills = () =>
+    runSave("skills", "Your skills have been updated.", async () => {
+      const token = localStorage.getItem("token") ?? "";
+
+      const selectedSkillNames = SKILLS_DATABASE.filter((skill) =>
+        skillDraft.includes(skill.id),
+      ).map((skill) => skill.name);
+
+      await applicantProfileService.storeApplicantSkills({
+        token,
+        skills: selectedSkillNames,
+      });
+
+      setSavedSkillIds(skillDraft);
+    });
+
   /* ----- Loading ----- */
 
   const loadProfile = async () => {
@@ -765,7 +804,7 @@ export default function ApplicantProfile() {
       const info = toInformation(data.information);
       const contact = toContact(data.contact);
       const experiences = toExperiences(data.experiences);
-      setProfile(res.data.information.applicant_profile_picture)
+      setProfile(res.data.information.applicant_profile_picture);
       setSavedInfo(info);
       setInfoDraft(info);
       setSavedContact(contact);
@@ -774,6 +813,12 @@ export default function ApplicantProfile() {
       setExpDraft(experiences);
       setSkills(toSkills(data.skills));
       setSavedResume(data.resume ?? null);
+      // skills
+      setSkills(toSkills(data.skills));
+      const ids = skillNamesToIds(toSkills(data.skills));
+      setSavedSkillIds(ids);
+      setSkillDraft(ids);
+
       setEditing({});
     } catch (err) {
       console.error(err);
@@ -804,7 +849,8 @@ export default function ApplicantProfile() {
     (async () => {
       try {
         const token = localStorage.getItem("token") ?? "";
-        const res = await applicantProfileService.downloadApplicantResume(token);
+        const res =
+          await applicantProfileService.downloadApplicantResume(token);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(res.data);
         setResumeUrl(objectUrl);
@@ -978,26 +1024,30 @@ export default function ApplicantProfile() {
   // Replaces the whole list on the server. Every row gets a new record_id,
   // so take the fresh list from the response.
   const saveExperience = () =>
-    runSave("experience", "Your work experience has been updated.", async () => {
-      const token = localStorage.getItem("token") ?? "";
+    runSave(
+      "experience",
+      "Your work experience has been updated.",
+      async () => {
+        const token = localStorage.getItem("token") ?? "";
 
-      const res = await applicantProfileService.storeApplicantExperience({
-        token,
-        data: {
-          has_experience: expDraft.length > 0,
-          experiences: expDraft.map((e) => ({
-            job_title: e.job_title.trim(),
-            company: e.company.trim(),
-            start_date: e.start_date,
-            end_date: e.end_date || null, // null = currently working here
-          })),
-        },
-      });
+        const res = await applicantProfileService.storeApplicantExperience({
+          token,
+          data: {
+            has_experience: expDraft.length > 0,
+            experiences: expDraft.map((e) => ({
+              job_title: e.job_title.trim(),
+              company: e.company.trim(),
+              start_date: e.start_date,
+              end_date: e.end_date || null, // null = currently working here
+            })),
+          },
+        });
 
-      const fresh = toExperiences(res.data?.experiences ?? []);
-      setSavedExperiences(fresh);
-      setExpDraft(fresh);
-    });
+        const fresh = toExperiences(res.data?.experiences ?? []);
+        setSavedExperiences(fresh);
+        setExpDraft(fresh);
+      },
+    );
 
   const handleModalClose = () => setStatus(null);
 
@@ -1425,7 +1475,9 @@ export default function ApplicantProfile() {
                 const isNew = e.id < 0;
                 // Don't shout "Required" at a row that was just added
                 const show = (msg?: string) =>
-                  msg && !(isNew && msg.startsWith("Required")) ? msg : undefined;
+                  msg && !(isNew && msg.startsWith("Required"))
+                    ? msg
+                    : undefined;
                 const current = e.end_date === null;
 
                 return (
@@ -1440,7 +1492,9 @@ export default function ApplicantProfile() {
                           value={e.job_title}
                           maxLength={255}
                           onChange={(ev) =>
-                            updateExperience(e.id, { job_title: ev.target.value })
+                            updateExperience(e.id, {
+                              job_title: ev.target.value,
+                            })
                           }
                         />
                       </FormField>
@@ -1456,14 +1510,19 @@ export default function ApplicantProfile() {
                         />
                       </FormField>
 
-                      <FormField label="Start date" error={show(errs.start_date)}>
+                      <FormField
+                        label="Start date"
+                        error={show(errs.start_date)}
+                      >
                         <input
                           type="month"
                           className={inputClass}
                           value={e.start_date}
                           max={thisMonth}
                           onChange={(ev) =>
-                            updateExperience(e.id, { start_date: ev.target.value })
+                            updateExperience(e.id, {
+                              start_date: ev.target.value,
+                            })
                           }
                         />
                       </FormField>
@@ -1477,7 +1536,9 @@ export default function ApplicantProfile() {
                           max={thisMonth}
                           disabled={current}
                           onChange={(ev) =>
-                            updateExperience(e.id, { end_date: ev.target.value })
+                            updateExperience(e.id, {
+                              end_date: ev.target.value,
+                            })
                           }
                         />
                       </FormField>
@@ -1513,23 +1574,14 @@ export default function ApplicantProfile() {
 
         {/* SKILLS (read-only for now) */}
         {activeTab === "skills" && !loading && !loadError && (
-          <Section title="Skills">
-            {skills.length === 0 ? (
-              <p className="archivo text-sm text-zinc-500">
-                No skills added yet.
-              </p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
-                  <li
-                    key={skill}
-                    className="archivo rounded-full bg-red-50 border border-red-200 px-3 py-1 text-sm text-red-800"
-                  >
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            )}
+          <Section
+            title="Skills"
+            onSave={saveSkills}
+            dirty={skillsDirty}
+            saving={savingSection === "skills"}
+            disabled={!skillsDirty || busy}
+          >
+            <SkillPicker selectedSkillIds={skillDraft} onToggle={toggleSkill} />
           </Section>
         )}
       </div>

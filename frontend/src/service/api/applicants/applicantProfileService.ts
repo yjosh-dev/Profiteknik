@@ -21,7 +21,7 @@ export type ExperienceForm = {
 };
 
 export const applicantProfileService = {
-  // Step 1: personal information + optional profile photo (multipart)
+
   storeApplicantInformation: async ({
     token,
     form,
@@ -51,9 +51,7 @@ export const applicantProfileService = {
     data: ContactForm;
   }) => axiosClient.post("/applicant/contact", data, authHeaders(token)),
 
-  // Step 3 (last) and Profile page, Experience tab: replaces the whole list
-  // and marks the account as no longer new.
-  // Response: { experiences: [{ id, job_title, company, start_date, end_date }] }
+
   storeApplicantExperience: async ({
     token,
     data,
