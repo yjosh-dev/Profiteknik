@@ -14,23 +14,10 @@ class OTPController extends Controller
         $otp = rand(1000, 9999);
         $expiresInMinutes = 10;
 
-        cache()->put(
-            "otp_{$request->email}",
-            $otp,
-            now()->addMinutes($expiresInMinutes)
-        );
+        cache()->put("otp_{$request->email}", $otp, now()->addMinutes($expiresInMinutes));
+        Mail::to($request->email)->send(new OtpMail($otp, $expiresInMinutes, $request->email));
 
-        Mail::to($request->email)->queue(
-            new OtpMail(
-                $otp,
-                $expiresInMinutes,
-                $request->email
-            )
-        );
-
-        return response()->json([
-            'message' => 'OTP sent'
-        ]);
+        return response()->json(['message' => 'OTP sent']);
     }
 
     public function verify(Request $request)
@@ -44,21 +31,15 @@ class OTPController extends Controller
         $storedOtp = Cache::get($key);
 
         if (! $storedOtp) {
-            return response()->json([
-                'message' => 'OTP expired or not found'
-            ], 422);
+            return response()->json(['message' => 'OTP expired or not found'], 422);
         }
 
         if ((string) $storedOtp !== (string) $request->otp) {
-            return response()->json([
-                'message' => 'Invalid OTP'
-            ], 422);
+            return response()->json(['message' => 'Invalid OTP'], 422);
         }
 
-        Cache::forget($key);
+        Cache::forget($key); // one-time use
 
-        return response()->json([
-            'message' => 'OTP verified'
-        ]);
+        return response()->json(['message' => 'OTP verified']);
     }
 }
