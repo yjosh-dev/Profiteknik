@@ -3,11 +3,11 @@ import { IoSearchSharp, IoLogOutSharp } from "react-icons/io5";
 import { IoMdMailUnread, IoMdNotifications, IoMdHelp } from "react-icons/io";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
-
+import { storageUrl } from "../../utils/storage";
 import { UseAuth } from "../../hooks/useAuth";
 import { CapitalizeFirst } from "../../utils/CapitalizeFirstLetter";
 
-export default function Header({onLogout} : {onLogout: () => void}) {
+export default function Header({ onLogout }: { onLogout: () => void }) {
   const { userData } = UseAuth();
   const data = userData?.userData;
 
@@ -42,17 +42,25 @@ type ProfileBlockProps = {
   user?: string;
   role?: string;
   profile_image?: string;
-  onLogout: () => void
+  onLogout: () => void;
 };
 
-function ProfileBlock({ user, role, profile_image, onLogout }: ProfileBlockProps) {
+function ProfileBlock({
+  user,
+  role,
+  profile_image,
+  onLogout,
+}: ProfileBlockProps) {
   const [dropdown, setDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdown(false);
       }
     }
@@ -60,7 +68,7 @@ function ProfileBlock({ user, role, profile_image, onLogout }: ProfileBlockProps
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const imageUrl = profile_image ? `http://localhost:8000/storage/${profile_image}` : null;
+  const imageUrl = storageUrl(profile_image);
 
   return (
     <div className="flex items-center gap-3" ref={dropdownRef}>
@@ -91,7 +99,11 @@ function ProfileBlock({ user, role, profile_image, onLogout }: ProfileBlockProps
           className="w-10 h-10 rounded-full border border-[#E3E0D8] bg-[#F1EFE9] overflow-hidden flex items-center justify-center hover:border-[#1C2321] transition-all focus:outline-none"
         >
           {imageUrl ? (
-            <img src={imageUrl} alt={user || "Profile"} className="w-full h-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={user || "Profile"}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <span className="font-serif text-sm font-medium text-[#1C2321]">
               {user ? user.charAt(0).toUpperCase() : "U"}
@@ -118,8 +130,16 @@ type DropdownMenuProps = ProfileBlockProps & {
   onLogout: () => void;
 };
 
-function DropdownMenu({ user, role, profile_image, onClose, onLogout }: DropdownMenuProps) {
-  const imageUrl = profile_image ? `http://localhost:8000/storage/${profile_image}` : null;
+function DropdownMenu({
+  user,
+  role,
+  profile_image,
+  onClose,
+  onLogout,
+}: DropdownMenuProps) {
+  const imageUrl = profile_image
+    ? `http://localhost:8000/storage/${profile_image}`
+    : null;
 
   const menu = [
     {
@@ -146,7 +166,11 @@ function DropdownMenu({ user, role, profile_image, onClose, onLogout }: Dropdown
       <div className="flex items-center gap-3 p-2 bg-[#F1EFE9] rounded-lg border border-[#E3E0D8]/60">
         <div className="w-10 h-10 rounded-full border border-[#E3E0D8] bg-[#FAF9F6] overflow-hidden flex items-center justify-center shrink-0">
           {imageUrl ? (
-            <img src={imageUrl} alt={user || "Profile"} className="w-full h-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={user || "Profile"}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <span className="font-serif text-sm font-medium text-[#1C2321]">
               {user ? user.charAt(0).toUpperCase() : "U"}

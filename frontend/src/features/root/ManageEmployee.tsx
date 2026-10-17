@@ -4,10 +4,11 @@ import { employeeAccount } from "../../service/api/root/employeeAccountService";
 import { PiFolderUserFill } from "react-icons/pi";
 import { FaSearch, FaFilter } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import { storageUrl } from "../../utils/storage";
 
 export default function ManageEmployee() {
   const [employeeData, setEmployeeData] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
   function mapApiEmployee(raw: any): Employee {
     return {
       id: raw.employee_id,
@@ -18,19 +19,24 @@ export default function ManageEmployee() {
       status: raw.status,
       profileUrl: raw.profile_image,
     };
-}
+  }
 
   const fetchData = async () => {
-    const res = await fetch("http://localhost:8000/api/root/employees");
-    const data = await res.json();
-    const employees: Employee[] = data.data.map(mapApiEmployee);
-    setEmployeeData(employees)
+    try {
+      setLoading(true);
+      const res = await employeeAccount.getEmployees();
+      const employees: Employee[] = res.data.data.map(mapApiEmployee);
+      setEmployeeData(employees);
+    } catch (error) {
+      console.error("Failed to load employees:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchData();
   }, []);
-
 
   const [search, setSearch] = useState<string>("");
 
@@ -43,15 +49,13 @@ export default function ManageEmployee() {
   };
 
   const handleDelete = async (id: string) => {
-      try {
-         setLoading(true)
-         const deleteEmployee = await employeeAccount.deleteEmployee(id);
-         setEmployeeData(prev => prev.filter(emp => emp.id !== id))
-         setLoading(false)
-      }catch(error){
-
-      }
-  }
+    try {
+      setLoading(true);
+      const deleteEmployee = await employeeAccount.deleteEmployee(id);
+      setEmployeeData((prev) => prev.filter((emp) => emp.id !== id));
+      setLoading(false);
+    } catch (error) {}
+  };
 
   return (
     <ContentContainer className=" bg-white px-5 relative w-30">
@@ -70,14 +74,14 @@ export default function ManageEmployee() {
         employees={employeeData}
         onDelete={handleDelete}
       />
-       {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="flex flex-col items-center gap-3 rounded-xl bg-white px-8 py-6 shadow-lg">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-red-600" />
-              <p className="text-sm font-medium text-gray-700">Loading...</p>
-            </div>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="flex flex-col items-center gap-3 rounded-xl bg-white px-8 py-6 shadow-lg">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-red-600" />
+            <p className="text-sm font-medium text-gray-700">Loading...</p>
           </div>
-        )}
+        </div>
+      )}
     </ContentContainer>
   );
 }
@@ -105,7 +109,7 @@ function EmployeeTable({
   onChange,
   value,
   employees,
-  onDelete
+  onDelete,
 }: EmployeeTableType) {
   return (
     <div className="w-full h-[90%]">
@@ -207,11 +211,17 @@ type Employee = {
   status: "active" | "inactive" | "pending";
 };
 
-function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: string) => void }) {
+function TableRow({
+  employee,
+  onDelete,
+}: {
+  employee: Employee;
+  onDelete: (id: string) => void;
+}) {
   useEffect(() => {
-    console.log(employee)
-  },[])
-  
+    console.log(employee);
+  }, []);
+
   const statusStyles: Record<Employee["status"], string> = {
     active: "bg-green-100 text-green-700",
     inactive: "bg-gray-200 text-gray-600",
@@ -222,7 +232,7 @@ function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: s
     <div className="bg-gray-100 rounded-sm flex items-center w-full px-4 py-3 gap-2 border-b border-gray-100 hover:bg-gray-50 mt-2">
       <div className="w-30 flex items-center">
         <img
-          src={"http://localhost:8000/storage" +"/" + employee.profileUrl}
+          src={storageUrl(employee.profileUrl) ?? ""}
           alt={employee.fullName}
           className="w-8 h-8 rounded-full object-cover"
         />
@@ -236,7 +246,9 @@ function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: s
 
       <p className="w-40 text-sm text-gray-700">{employee.created_at}</p>
 
-      <p className="w-40 text-sm text-gray-700">{employee.last_login || "N/A"}</p>
+      <p className="w-40 text-sm text-gray-700">
+        {employee.last_login || "N/A"}
+      </p>
 
       <div className="w-30">
         <span
@@ -247,8 +259,18 @@ function TableRow({ employee, onDelete }: { employee: Employee, onDelete: (id: s
       </div>
 
       <div className="w-30 flex items-center gap-10">
-        <button className="text-xs text-blue-600 hover:underline" onClick={() => alert(employee.id)}>Edit</button>
-        <button className="text-xs text-red-600 hover:underline" onClick={() => onDelete(employee.id)}>Delete</button>
+        <button
+          className="text-xs text-blue-600 hover:underline"
+          onClick={() => alert(employee.id)}
+        >
+          Edit
+        </button>
+        <button
+          className="text-xs text-red-600 hover:underline"
+          onClick={() => onDelete(employee.id)}
+        >
+          Delete
+        </button>
       </div>
     </div>
   );

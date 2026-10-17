@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { jobListingApi } from "../../service/api/employee/jobListingService";
 import {
   MdWorkOutline,
   MdRemoveRedEye,
@@ -34,7 +34,6 @@ interface PaginatedResponse {
 }
 
 import { type JobListingDetailData } from "../../types/JobListingTypes";
-import { jobListingApi } from "../../service/api/employee/jobListingService";
 import { NavLink, useNavigate } from "react-router-dom";
 
 export default function ManageJobListing() {
@@ -44,7 +43,9 @@ export default function ManageJobListing() {
   const [lastPage, setLastPage] = useState<number>(1);
   const [totalJobs, setTotalJobs] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedJob, setSelectedJob] = useState<JobListingDetailData | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobListingDetailData | null>(
+    null,
+  );
   const [searchTerm, setSearchTerm] = useState<string>("");
   const navigate = useNavigate();
 
@@ -52,15 +53,7 @@ export default function ManageJobListing() {
   const fetchJobListings = async (page: number, searchKeyword: string) => {
     setLoading(true);
     try {
-      const response = await axios.get<PaginatedResponse>(
-        `http://localhost:8000/api/employee/job_listings`,
-        {
-          params: {
-            page: page,
-            search: searchKeyword,
-          },
-        },
-      );
+      const response = await jobListingApi.getJobListings(page, searchKeyword);
 
       // Map Laravel pagination response to React state
       setJobs(response.data.data);
@@ -87,7 +80,7 @@ export default function ManageJobListing() {
 
   // testing of more details
   const onClick = async (job_id: number) => {
-     navigate(`/employee/dash/job_listing?job_id=${job_id}`)
+    navigate(`/employee/dash/job_listing?job_id=${job_id}`);
   };
 
   return (
@@ -144,9 +137,7 @@ export default function ManageJobListing() {
                   Accepted
                 </span>
               </div>
-              <p className="archivo text-xl font-medium text-[#1C2321]">
-                24
-              </p>
+              <p className="archivo text-xl font-medium text-[#1C2321]">24</p>
             </div>
 
             <div className="bg-[#F1EFE9] border border-[#E3E0D8]/60 rounded-lg p-2">
@@ -155,9 +146,7 @@ export default function ManageJobListing() {
                   Rejected
                 </span>
               </div>
-              <p className="archivo text-xl font-medium text-[#1C2321]">
-                41
-              </p>
+              <p className="archivo text-xl font-medium text-[#1C2321]">41</p>
             </div>
 
             <div className="bg-[#F1EFE9] border border-[#E3E0D8]/60 rounded-lg p-2">
@@ -166,9 +155,7 @@ export default function ManageJobListing() {
                   Waitlisted
                 </span>
               </div>
-              <p className="archivo text-xl font-medium text-[#1C2321]">
-                16
-              </p>
+              <p className="archivo text-xl font-medium text-[#1C2321]">16</p>
             </div>
           </div>
         </div>
@@ -415,5 +402,3 @@ function StatusBadge({ status }: { status: string }) {
 {
   /* More Details - Individual Data of Job Listing */
 }
-
-

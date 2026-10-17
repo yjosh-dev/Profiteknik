@@ -5,6 +5,8 @@ import ApplicantInfoCard from "../../../components/common/ApplicantInfoCard";
 import ScreenApplicants from "../../../features/employee/Applications/ScreenApplicants";
 import Dialog from "../../../components/ui/Dialog";
 
+import { storageUrl } from "../../../utils/storage";
+
 import { applicantScreeningService } from "../../../service/api/employee/applicantScreeningService";
 import StatusChangeModal from "../../../components/common/ChangeStatusModal";
 
@@ -341,7 +343,7 @@ export function ApplicationLayout() {
           <div className="relative h-full min-w-0 pr-2">
             <aside className={`${box} h-full min-w-0 overflow-hidden`}>
               <ApplicantInfoCard
-                profileImageUrl={`http://localhost:8000/storage/${applicant.profile_image_url}`}
+                profileImageUrl={storageUrl(applicant.profile_image_url) ?? ""}
                 firstName={applicant.first_name}
                 middleName={applicant.middle_name}
                 lastName={applicant.last_name}

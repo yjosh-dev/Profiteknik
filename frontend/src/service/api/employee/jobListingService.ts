@@ -40,4 +40,10 @@ export const jobListingApi = {
       },
     });
   },
+
+  getJobListings: async (page: number, search: string) => {
+    return await axiosClient.get("/employee/job_listings", {
+      params: { page, search },
+    });
+  },
 };

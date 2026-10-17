@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { storageUrl } from "../../utils/storage";
 import {
   FaArrowUpFromBracket,
   FaEllipsis,
@@ -1162,7 +1163,7 @@ export default function ApplicantProfile() {
         <div className="w-32 h-32 rounded-full bg-red-50 text-red-700 flex items-center justify-center overflow-hidden">
           {profile_image ? (
             <img
-              src={`http://localhost:8000/storage/${profile_image}`}
+              src={storageUrl(profile_image) ?? ""}
               alt={name}
               className="w-full h-full object-cover"
             />
