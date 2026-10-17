@@ -17,7 +17,9 @@ export interface ChatMessage {
   createdAt: unknown;
 }
 
-function getMessagesCollection(applicationId: number | string) {
+function getMessagesCollection(
+  applicationId: number | string
+) {
   return collection(
     db,
     "chats",
@@ -32,33 +34,60 @@ export async function sendMessage(
   senderType: "applicant" | "employee",
   message: string
 ) {
-  const messagesRef = getMessagesCollection(applicationId);
+  console.log("=== FIREBASE SEND START ===");
+  console.log("applicationId:", applicationId);
+  console.log("senderId:", senderId);
+  console.log("senderType:", senderType);
+  console.log("message:", message);
 
-  await addDoc(messagesRef, {
+  const messagesRef =
+    getMessagesCollection(applicationId);
+
+  console.log(
+    "messagesRef:",
+    messagesRef.path
+  );
+
+  const result = await addDoc(messagesRef, {
     senderId,
     senderType,
     message: message.trim(),
     createdAt: serverTimestamp(),
   });
+
+  console.log("=== FIREBASE SEND SUCCESS ===");
+  console.log("document ID:", result.id);
+
+  return result;
 }
 
 export function listenToMessages(
   applicationId: number | string,
   callback: (messages: ChatMessage[]) => void
 ) {
-  const messagesRef = getMessagesCollection(applicationId);
+  const messagesRef =
+    getMessagesCollection(applicationId);
 
   const messagesQuery = query(
     messagesRef,
     orderBy("createdAt", "asc")
   );
 
-  return onSnapshot(messagesQuery, (snapshot) => {
-    const messages = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as ChatMessage[];
+  return onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      const messages = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as ChatMessage[];
 
-    callback(messages);
-  });
+      callback(messages);
+    },
+    (error) => {
+      console.error(
+        "Firestore listener error:",
+        error
+      );
+    }
+  );
 }

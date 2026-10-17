@@ -14,4 +14,17 @@ class ApplicantJobApplicationController extends Controller
     {
         return $this->ApplicantJobApplicationService->storeJobApplication($request, $job_id);
     }
+
+    public function cancel(Request $request, int $applicationId): JsonResponse
+    {
+        $application = $this->service->cancelJobApplication(
+            $request,
+            $applicationId
+        );
+
+        return response()->json([
+            'message' => 'Application cancelled successfully.',
+            'application' => $application,
+        ]);
+    }
 }

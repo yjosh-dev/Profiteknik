@@ -27,4 +27,11 @@ export const applicantsMyJobService = {
         Authorization: `Bearer ${token}`,
       },
     }),
+
+  fetchConversation: async (jobId: number, token: string) =>
+    axiosClient.get(`/applicant/job/${jobId}/conversation`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }),
 };

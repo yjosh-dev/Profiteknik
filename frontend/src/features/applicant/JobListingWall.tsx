@@ -387,7 +387,7 @@ function JobCard({
           </div>
         </div>
         <p className="archivo shrink-0 text-sm font-normal text-zinc-500">
-          <p>Posted 3 hours ago</p>
+          <p>Posted hours ago</p>
         </p>
       </div>
 

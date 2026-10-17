@@ -18,6 +18,8 @@ use App\Http\Controllers\Users\ApplicantJobListingController;
 use App\Http\Controllers\Users\ApplicantMyJobsController;
 use App\Http\Controllers\Users\ApplicantNotificationController;
 use App\Http\Controllers\Users\ApplicationTrackingController;
+use App\Http\Controllers\Users\ApplicantConversationController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -111,13 +113,31 @@ Route::prefix('/applicant')->group(function () {
         )->whereNumber('applicationId');
     });
 
+
     Route::prefix('/auth')->controller(ApplicantAuthController::class)->group(function () {
         Route::post('/login', [ApplicantAuthController::class, 'login']);
         Route::get('/verify', [ApplicantAuthController::class, 'verify'])->middleware('auth:sanctum');
         Route::post('/logout', [ApplicantAuthController::class, 'logout']);
     });
+    // message related
+    Route::controller(ApplicantConversationController::class)->group(function () {
+    Route::get(
+        '/job/{jobId}/conversation',
+        'show'
+    )->whereNumber('jobId')->middleware('auth:sanctum');
+});
 
-    Route::post('/job_listing/{job_id}/apply', [ApplicantJobApplicationController::class, 'storeJobApplication'])->middleware('auth:sanctum');
+    // job apply related
+
+    Route::post(
+        '/job_listing/{job_id}/apply',
+        [ApplicantJobApplicationController::class, 'storeJobApplication']
+    )->middleware('auth:sanctum');
+
+    Route::patch(
+        '/job_listing/{applicationId}/cancel',
+        [ApplicantJobApplicationController::class, 'cancel']
+    )->middleware('auth:sanctum');
 
 });
 

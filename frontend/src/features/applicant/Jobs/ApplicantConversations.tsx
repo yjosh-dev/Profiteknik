@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-
 import {
-  Archive,
   FileText,
   Image as ImageIcon,
   Paperclip,
   Send,
-  Star,
   X,
 } from "lucide-react";
+
+import { applicantsMyJobService } from "../../../service/api/applicants/applicantsMyJobsService";
+import {
+  listenToMessages,
+  sendMessage,
+  type ChatMessage,
+} from "../../../service/firebase/chatService";
 
 interface Attachment {
   id: number;
@@ -19,7 +23,7 @@ interface Attachment {
 }
 
 interface Message {
-  id: number;
+  id: string;
   sender: "applicant" | "recruiter";
   text: string;
   time: string;
@@ -28,6 +32,8 @@ interface Message {
 
 interface Conversation {
   id: number;
+  applicationId: number;
+  jobId: number;
   jobTitle: string;
   jobType: string;
   status: "Pending" | "Shortlisted" | "Interview" | "Rejected";
@@ -36,170 +42,323 @@ interface Conversation {
   messages: Message[];
 }
 
-const initialConversations: Conversation[] = [
-  {
-    id: 1,
-    jobTitle: "Frontend Developer",
-    jobType: "Full-time",
-    status: "Shortlisted",
-    lastMessage: "Thanks! Reviewing your application now.",
-    date: "Oct 15",
-    messages: [
-      {
-        id: 1,
-        sender: "applicant",
-        text: "Hello, I would like to ask about my application for the Frontend Developer position.",
-        time: "10:21 AM",
-      },
-      {
-        id: 2,
-        sender: "recruiter",
-        text: "Hi! We have received your application. Could you also send your latest portfolio and resume?",
-        time: "10:24 AM",
-      },
-      {
-        id: 3,
-        sender: "applicant",
-        text: "Sure. I have attached them below.",
-        time: "10:27 AM",
-        attachments: [
-          {
-            id: 1,
-            name: "resume.pdf",
-            type: "file",
-            url: "#",
-            size: "245 KB",
-          },
-          {
-            id: 2,
-            name: "portfolio-preview.png",
-            type: "image",
-            url: "https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=900&q=80",
-            size: "1.2 MB",
-          },
-        ],
-      },
-      {
-        id: 4,
-        sender: "recruiter",
-        text: "Thanks! Reviewing your application now.",
-        time: "10:31 AM",
-      },
-    ],
-  },
-  {
-    id: 2,
-    jobTitle: "Pipefitter",
-    jobType: "Full-time",
-    status: "Pending",
-    lastMessage: "We will update you once your application is reviewed.",
-    date: "Oct 14",
-    messages: [
-      {
-        id: 1,
-        sender: "applicant",
-        text: "Good day. I would like to follow up regarding my Pipefitter application.",
-        time: "2:15 PM",
-      },
-      {
-        id: 2,
-        sender: "recruiter",
-        text: "Your application is currently under review.",
-        time: "2:22 PM",
-      },
-      {
-        id: 3,
-        sender: "recruiter",
-        text: "We will update you once your application is reviewed.",
-        time: "2:23 PM",
-      },
-    ],
-  },
-  {
-    id: 3,
-    jobTitle: "Electrical Technician",
-    jobType: "Full-time",
-    status: "Interview",
-    lastMessage: "Your interview schedule has been confirmed.",
-    date: "Oct 13",
-    messages: [
-      {
-        id: 1,
-        sender: "recruiter",
-        text: "Your application has progressed to the interview stage.",
-        time: "9:10 AM",
-      },
-      {
-        id: 2,
-        sender: "applicant",
-        text: "Thank you. When will the interview take place?",
-        time: "9:15 AM",
-      },
-      {
-        id: 3,
-        sender: "recruiter",
-        text: "Your interview schedule has been confirmed. We will send the meeting details shortly.",
-        time: "9:19 AM",
-      },
-    ],
-  },
-];
+interface ApplicantApplication {
+  application_id: number;
+  applicant_id: number;
+  job_id: number;
+  status: string;
+  date_applied: string;
+  job_listing: {
+    job_id: number;
+    job_title: string;
+    job_description: string;
+    minimum_salary: number;
+    maximum_salary: number;
+    vacant_position: number;
+    employment_type: string;
+    posted_at: string;
+    posted_until: string | null;
+    updated_at: string | null;
+  };
+}
 
 function getStatusClass(status: Conversation["status"]) {
   switch (status) {
     case "Shortlisted":
       return "bg-gray-100 text-gray-700";
+
     case "Interview":
       return "bg-gray-100 text-gray-700";
+
     case "Rejected":
       return "bg-gray-100 text-gray-600";
+
     case "Pending":
     default:
       return "bg-gray-100 text-gray-600";
   }
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
+function formatMessageTime(value: unknown) {
+  if (!value) {
+    return "";
   }
 
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
+  try {
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "toDate" in value &&
+      typeof (value as { toDate?: unknown }).toDate === "function"
+    ) {
+      const date = (
+        value as {
+          toDate: () => Date;
+        }
+      ).toDate();
+
+      return date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    if (value instanceof Date) {
+      return value.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    if (typeof value === "string" || typeof value === "number") {
+      const date = new Date(value);
+
+      if (!Number.isNaN(date.getTime())) {
+        return date.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      }
+    }
+  } catch {
+    return "";
   }
 
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return "";
 }
 
-function isImageFile(file: File) {
-  return file.type.startsWith("image/");
+function formatConversationDate(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function isPdfFile(file: File) {
-  return file.type === "application/pdf";
+function mapApplicationStatus(
+  status: string
+): Conversation["status"] {
+  switch (status.toLowerCase()) {
+    case "shortlisted":
+      return "Shortlisted";
+
+    case "interview":
+      return "Interview";
+
+    case "rejected":
+      return "Rejected";
+
+    case "pending":
+    default:
+      return "Pending";
+  }
+}
+
+function mapFirestoreMessages(
+  messages: ChatMessage[]
+): Message[] {
+  return messages.map((message) => ({
+    id: message.id,
+    sender:
+      message.senderType === "employee"
+        ? "recruiter"
+        : "applicant",
+    text: message.message,
+    time: formatMessageTime(message.createdAt),
+  }));
 }
 
 export default function ApplicantConversations() {
   const [selectedId, setSelectedId] = useState<number | null>(
-    initialConversations[0]?.id ?? null
+    null
   );
 
   const [inboxFilter, setInboxFilter] = useState("Inbox");
 
-  const [conversations, setConversations] = useState<Conversation[]>(
-    initialConversations
+  const [conversations, setConversations] = useState<
+    Conversation[]
+  >([]);
+
+  const [applicantId, setApplicantId] = useState<number | null>(
+    null
   );
 
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadApplications = async () => {
+      if (!token) {
+        if (mounted) {
+          setLoading(false);
+          setError("You are not authenticated.");
+        }
+
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response =
+          await applicantsMyJobService.fetchPendingJobs(token);
+
+        const applicantIdFromResponse =
+          response.data?.applicant_id;
+
+        const applications: ApplicantApplication[] =
+          response.data?.applications ?? [];
+
+        if (!mounted) {
+          return;
+        }
+
+        if (applicantIdFromResponse) {
+          setApplicantId(applicantIdFromResponse);
+        }
+
+        const mappedConversations: Conversation[] =
+          applications.map((application) => ({
+            id: application.job_id,
+            applicationId: application.application_id,
+            jobId: application.job_id,
+            jobTitle:
+              application.job_listing?.job_title ??
+              "Untitled Job",
+            jobType:
+              application.job_listing?.employment_type ??
+              "Not specified",
+            status: mapApplicationStatus(application.status),
+            lastMessage: "No conversation yet.",
+            date: formatConversationDate(
+              application.date_applied
+            ),
+            messages: [],
+          }));
+
+        setConversations(mappedConversations);
+
+        if (mappedConversations.length > 0) {
+          setSelectedId((current) => {
+            if (
+              current !== null &&
+              mappedConversations.some(
+                (conversation) => conversation.id === current
+              )
+            ) {
+              return current;
+            }
+
+            return mappedConversations[0].id;
+          });
+        } else {
+          setSelectedId(null);
+        }
+      } catch (err) {
+        console.error(
+          "Failed to load applicant applications:",
+          err
+        );
+
+        if (mounted) {
+          setError(
+            "Unable to load your application conversations."
+          );
+          setConversations([]);
+          setSelectedId(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadApplications();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
+
   const selectedConversation =
-    conversations.find((conversation) => conversation.id === selectedId) ??
-    null;
+    conversations.find(
+      (conversation) => conversation.id === selectedId
+    ) ?? null;
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      return;
+    }
+
+    const applicationId =
+      selectedConversation.applicationId;
+
+    const unsubscribe = listenToMessages(
+      applicationId,
+      (firestoreMessages) => {
+        const messages =
+          mapFirestoreMessages(firestoreMessages);
+
+        setConversations((previous) =>
+          previous.map((conversation) => {
+            if (
+              conversation.applicationId !== applicationId
+            ) {
+              return conversation;
+            }
+
+            const lastMessage =
+              messages[messages.length - 1];
+
+            return {
+              ...conversation,
+              messages,
+              lastMessage: lastMessage
+                ? lastMessage.text ||
+                  (lastMessage.sender === "applicant"
+                    ? "You sent a message."
+                    : "Recruiter sent a message.")
+                : "No conversation yet.",
+              date:
+                lastMessage?.time ||
+                conversation.date,
+            };
+          })
+        );
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectedConversation?.applicationId]);
+
+  const conversationStarted =
+    selectedConversation?.messages.some(
+      (message) => message.sender === "recruiter"
+    ) ?? false;
 
   return (
     <div className="w-full h-full min-h-[560px] p-4 md:p-5">
       <div className="w-full h-full min-h-[520px] grid grid-cols-1 lg:grid-cols-[32%_68%] gap-4">
         {/* Conversation List */}
         <div className="min-h-0 flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {/* Header */}
           <div className="px-4 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -216,19 +375,42 @@ export default function ApplicantConversations() {
             <div className="mt-4">
               <select
                 value={inboxFilter}
-                onChange={(event) => setInboxFilter(event.target.value)}
+                onChange={(event) =>
+                  setInboxFilter(event.target.value)
+                }
                 className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-gray-400"
               >
                 <option>Inbox</option>
-                <option>Archived</option>
-                <option>Starred</option>
+                <option disabled>Archived</option>
+                <option disabled>Starred</option>
               </select>
             </div>
           </div>
 
-          {/* Conversation List */}
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {conversations.length === 0 ? (
+            {loading ? (
+              <div className="h-full flex items-center justify-center p-6">
+                <div className="text-center">
+                  <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-gray-800" />
+
+                  <p className="mt-3 text-sm text-gray-500">
+                    Loading conversations...
+                  </p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="h-full flex items-center justify-center p-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-900">
+                    Unable to load conversations
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            ) : conversations.length === 0 ? (
               <div className="h-full flex items-center justify-center p-6">
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-900">
@@ -243,13 +425,16 @@ export default function ApplicantConversations() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {conversations.map((conversation) => {
-                  const isSelected = selectedId === conversation.id;
+                  const isSelected =
+                    selectedId === conversation.id;
 
                   return (
                     <button
-                      key={conversation.id}
+                      key={conversation.applicationId}
                       type="button"
-                      onClick={() => setSelectedId(conversation.id)}
+                      onClick={() =>
+                        setSelectedId(conversation.id)
+                      }
                       className={`w-full text-left px-4 py-4 transition ${
                         isSelected
                           ? "bg-gray-50 border-l-2 border-gray-900"
@@ -258,11 +443,9 @@ export default function ApplicantConversations() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="truncate text-sm font-semibold text-gray-900">
-                              {conversation.jobTitle}
-                            </h3>
-                          </div>
+                          <h3 className="truncate text-sm font-semibold text-gray-900">
+                            {conversation.jobTitle}
+                          </h3>
 
                           <p className="mt-1 text-xs text-gray-500">
                             {conversation.jobType}
@@ -298,7 +481,8 @@ export default function ApplicantConversations() {
         {/* Conversation */}
         <ApplicantConversation
           conversation={selectedConversation}
-          setConversations={setConversations}
+          conversationStarted={conversationStarted}
+          applicantId={applicantId ?? undefined}
         />
       </div>
     </div>
@@ -307,21 +491,30 @@ export default function ApplicantConversations() {
 
 interface ApplicantConversationProps {
   conversation: Conversation | null;
-  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
+  conversationStarted: boolean;
+  applicantId?: number;
 }
 
 function ApplicantConversation({
   conversation,
-  setConversations,
+  conversationStarted,
+  applicantId,
 }: ApplicantConversationProps) {
   const [inputValue, setInputValue] = useState("");
-  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>(
-    []
-  );
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [sending, setSending] = useState(false);
+
+  const [pendingAttachments, setPendingAttachments] =
+    useState<Attachment[]>([]);
+
+  const [lightboxUrl, setLightboxUrl] =
+    useState<string | null>(null);
+
+  const fileInputRef =
+    useRef<HTMLInputElement | null>(null);
+
+  const messagesEndRef =
+    useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -338,81 +531,59 @@ function ApplicantConversation({
   const handleFileSelect = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const files = Array.from(event.target.files ?? []);
-
-    if (!files.length) {
-      return;
-    }
-
-    const newAttachments: Attachment[] = files.map((file, index) => {
-      const image = isImageFile(file);
-
-      return {
-        id: Date.now() + index,
-        name: file.name,
-        type: image ? "image" : "file",
-        url: URL.createObjectURL(file),
-        size: formatFileSize(file.size),
-      };
-    });
-
-    setPendingAttachments((previous) => [
-      ...previous,
-      ...newAttachments,
-    ]);
-
     event.target.value = "";
   };
 
   const removePendingAttachment = (id: number) => {
     setPendingAttachments((previous) =>
-      previous.filter((attachment) => attachment.id !== id)
+      previous.filter(
+        (attachment) => attachment.id !== id
+      )
     );
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!conversation) {
+      return;
+    }
+
+    if (!conversationStarted) {
+      return;
+    }
+
+    if (!applicantId) {
       return;
     }
 
     const text = inputValue.trim();
 
-    if (!text && pendingAttachments.length === 0) {
+    if (!text) {
       return;
     }
 
-    const newMessage: Message = {
-      id: Date.now(),
-      sender: "applicant",
-      text,
-      time: new Date().toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      attachments:
-        pendingAttachments.length > 0
-          ? pendingAttachments
-          : undefined,
-    };
+    if (sending) {
+      return;
+    }
 
-    setConversations((previous) =>
-      previous.map((item) =>
-        item.id === conversation.id
-          ? {
-              ...item,
-              lastMessage:
-                text ||
-                (pendingAttachments.length === 1
-                  ? `Sent ${pendingAttachments[0].name}`
-                  : `Sent ${pendingAttachments.length} attachments`),
-              messages: [...item.messages, newMessage],
-            }
-          : item
-      )
-    );
+    try {
+      setSending(true);
 
-    setInputValue("");
-    setPendingAttachments([]);
+      await sendMessage(
+        conversation.applicationId,
+        String(applicantId),
+        "applicant",
+        text
+      );
+
+      setInputValue("");
+    } catch (error) {
+      console.error(
+        "Failed to send message:",
+        error
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKeyDown = (
@@ -420,7 +591,8 @@ function ApplicantConversation({
   ) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      handleSendMessage();
+
+      void handleSendMessage();
     }
   };
 
@@ -433,7 +605,8 @@ function ApplicantConversation({
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Select a job application from the list to view its messages.
+            Select a job application from the list to view its
+            messages.
           </p>
         </div>
       </div>
@@ -443,7 +616,6 @@ function ApplicantConversation({
   return (
     <>
       <div className="min-h-0 flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        {/* Conversation Header */}
         <div className="px-5 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -466,165 +638,143 @@ function ApplicantConversation({
           </div>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 min-h-0 overflow-y-auto p-5 bg-white">
           <div className="max-w-3xl mx-auto space-y-4">
-            {conversation.messages.map((message) => {
-              const isApplicant = message.sender === "applicant";
+            {conversation.messages.length === 0 ? (
+              <div className="min-h-[300px] flex items-center justify-center">
+                <div className="text-center max-w-sm">
+                  <p className="text-sm font-medium text-gray-900">
+                    No conversation yet
+                  </p>
 
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    isApplicant ? "justify-end" : "justify-start"
-                  }`}
-                >
+                  <p className="mt-1 text-sm text-gray-500">
+                    A recruiter needs to start the conversation
+                    before you can send a message.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              conversation.messages.map((message) => {
+                const isApplicant =
+                  message.sender === "applicant";
+
+                return (
                   <div
-                    className={`max-w-[75%] ${
-                      isApplicant ? "items-end" : "items-start"
-                    } flex flex-col`}
+                    key={message.id}
+                    className={`flex ${
+                      isApplicant
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
                   >
                     <div
-                      className={`rounded-lg px-4 py-3 text-sm ${
+                      className={`max-w-[75%] ${
                         isApplicant
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                          ? "items-end"
+                          : "items-start"
+                      } flex flex-col`}
                     >
-                      {message.text && (
-                        <p className="whitespace-pre-wrap break-words">
-                          {message.text}
-                        </p>
-                      )}
-
-                      {message.attachments &&
-                        message.attachments.length > 0 && (
-                          <div
-                            className={`${
-                              message.text ? "mt-3" : ""
-                            } space-y-2`}
-                          >
-                            {message.attachments.map((attachment) => (
-                              <MessageAttachment
-                                key={attachment.id}
-                                attachment={attachment}
-                                isApplicant={isApplicant}
-                                onImageClick={() =>
-                                  attachment.type === "image" &&
-                                  setLightboxUrl(attachment.url)
-                                }
-                              />
-                            ))}
-                          </div>
+                      <div
+                        className={`rounded-lg px-4 py-3 text-sm ${
+                          isApplicant
+                            ? "bg-gray-900 text-white"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {message.text && (
+                          <p className="whitespace-pre-wrap break-words">
+                            {message.text}
+                          </p>
                         )}
-                    </div>
+                      </div>
 
-                    <span className="mt-1 px-1 text-xs text-gray-400">
-                      {message.time}
-                    </span>
+                      <span className="mt-1 px-1 text-xs text-gray-400">
+                        {message.time}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
 
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Pending Attachments */}
-        {pendingAttachments.length > 0 && (
-          <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-            <div className="flex flex-wrap gap-2">
-              {pendingAttachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2"
-                >
-                  {attachment.type === "image" ? (
-                    <ImageIcon className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-gray-500" />
-                  )}
+        {conversationStarted ? (
+          <div className="border-t border-gray-200 bg-white p-3">
+            <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
 
-                  <div className="max-w-[180px]">
-                    <p className="truncate text-xs font-medium text-gray-700">
-                      {attachment.name}
-                    </p>
+              <button
+                type="button"
+                disabled
+                className="shrink-0 rounded-md border border-gray-200 p-2.5 text-gray-400 cursor-not-allowed"
+                aria-label="Attachments are not available yet"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
 
-                    {attachment.size && (
-                      <p className="text-[11px] text-gray-400">
-                        {attachment.size}
-                      </p>
-                    )}
-                  </div>
+              <textarea
+                value={inputValue}
+                onChange={(event) =>
+                  setInputValue(event.target.value)
+                }
+                onKeyDown={handleKeyDown}
+                placeholder="Write a message..."
+                rows={1}
+                disabled={sending}
+                className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400 disabled:bg-gray-50"
+              />
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      removePendingAttachment(attachment.id)
-                    }
-                    className="ml-1 text-gray-400 hover:text-gray-700"
-                    aria-label={`Remove ${attachment.name}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  void handleSendMessage()
+                }
+                disabled={
+                  !inputValue.trim() || sending
+                }
+                className="shrink-0 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                {sending ? (
+                  <span className="text-xs">
+                    Sending...
+                  </span>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">
+                      Send
+                    </span>
+
+                    <Send className="h-4 w-4 sm:hidden" />
+                  </>
+                )}
+              </button>
             </div>
+
+            <p className="mt-2 px-1 text-[11px] text-gray-400">
+              Press Enter to send. Use Shift + Enter for a
+              new line.
+            </p>
+          </div>
+        ) : (
+          <div className="border-t border-gray-200 bg-gray-50 px-5 py-4">
+            <p className="text-center text-sm text-gray-500">
+              A recruiter must start this conversation before
+              you can reply.
+            </p>
           </div>
         )}
-
-        {/* Input */}
-        <div className="border-t border-gray-200 bg-white p-3">
-          <div className="flex items-end gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.pdf,.doc,.docx"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 rounded-md border border-gray-200 p-2.5 text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-              aria-label="Attach file"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
-
-            <textarea
-              value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Write a message..."
-              rows={1}
-              className="min-h-[42px] max-h-32 flex-1 resize-none rounded-md border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-400"
-            />
-
-            <button
-              type="button"
-              onClick={handleSendMessage}
-              disabled={
-                !inputValue.trim() &&
-                pendingAttachments.length === 0
-              }
-              className="shrink-0 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
-            >
-              <span className="hidden sm:inline">Send</span>
-              <Send className="h-4 w-4 sm:hidden" />
-            </button>
-          </div>
-
-          <p className="mt-2 px-1 text-[11px] text-gray-400">
-            Press Enter to send. Use Shift + Enter for a new line.
-          </p>
-        </div>
       </div>
 
-      {/* Image Lightbox */}
       {lightboxUrl && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
@@ -643,7 +793,9 @@ function ApplicantConversation({
             src={lightboxUrl}
             alt="Attachment preview"
             className="max-h-[85vh] max-w-[90vw] rounded-md object-contain"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
           />
         </div>
       )}
@@ -695,14 +847,18 @@ function MessageAttachment({
     >
       <FileText
         className={`h-5 w-5 shrink-0 ${
-          isApplicant ? "text-white" : "text-gray-500"
+          isApplicant
+            ? "text-white"
+            : "text-gray-500"
         }`}
       />
 
       <div className="min-w-0 text-left">
         <p
           className={`truncate text-xs font-medium ${
-            isApplicant ? "text-white" : "text-gray-700"
+            isApplicant
+              ? "text-white"
+              : "text-gray-700"
           }`}
         >
           {attachment.name}
@@ -711,7 +867,9 @@ function MessageAttachment({
         {attachment.size && (
           <p
             className={`text-[11px] ${
-              isApplicant ? "text-gray-300" : "text-gray-400"
+              isApplicant
+                ? "text-gray-300"
+                : "text-gray-400"
             }`}
           >
             {attachment.size}
