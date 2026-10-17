@@ -12,9 +12,11 @@ import { IoMdHelp } from "react-icons/io";
 import { MdOutlineChevronRight } from "react-icons/md";
 
 import { AuthContext } from "../../context/AuthProvider";
+import { applicantNotificationService } from "../../service/api/applicants/applicantNotificationService";
 
 // Where "View Profile" goes, and where uploaded images are served from
 const PROFILE_PATH = "/applicant/profile";
+
 const STORAGE_URL =
   import.meta.env.VITE_STORAGE_URL ?? "http://localhost:8000/storage";
 
@@ -26,58 +28,33 @@ const CapitalizeFirst = (text: string) =>
 ========================================================= */
 
 export type AppNotification = {
-  id: number | string;
+  id: number;
   title: string;
   message: string;
-  created_at: string; // ISO string
-  read: boolean;
-  link?: string; // optional route to open when clicked
+  created_at: string;
+  job_id?: number | null;
+  application_id?: number | null;
 };
 
 const timeAgo = (iso: string) => {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+
   if (diff < 60) return "Just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
   });
 };
 
-// TODO: remove this sample data and load real notifications from your API
-const minutesAgo = (m: number) =>
-  new Date(Date.now() - m * 60 * 1000).toISOString();
-
-const SAMPLE_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 1,
-    title: "Interview scheduled",
-    message: "Your interview for Software Engineer has been scheduled.",
-    created_at: minutesAgo(5),
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Application viewed",
-    message: "An employer viewed your application.",
-    created_at: minutesAgo(120),
-    read: false,
-  },
-  {
-    id: 3,
-    title: "Welcome to Profiteknik",
-    message: "Complete your profile to get better job matches.",
-    created_at: minutesAgo(60 * 48),
-    read: true,
-  },
-];
-
 export default function HomeLayout() {
   return (
     <div className="w-dvw h-dvh flex flex-col">
       <Navbar />
+
       <div className="flex-1 overflow-y-auto">
         <Outlet />
       </div>
@@ -87,15 +64,18 @@ export default function HomeLayout() {
 
 function Navbar() {
   const [activeTab, setActiveTab] = useState("Home");
+
   // Only one dropdown can be open at a time
   const [openMenu, setOpenMenu] = useState<"notifications" | "profile" | null>(
     null,
   );
-  const [notifications, setNotifications] = useState<AppNotification[]>(
-    SAMPLE_NOTIFICATIONS,
-  );
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
 
@@ -106,8 +86,8 @@ function Navbar() {
 
   const currentUser = auth?.userData?.userData;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const hasUnread = unreadCount > 0;
+  const hasNotifications = notifications.length > 0;
+  const notificationCount = notifications.length;
 
   const navItems = [
     { title: "Home", path: "" },
@@ -116,60 +96,162 @@ function Navbar() {
     { title: "Career", path: "careers" },
   ];
 
-  // Close the open dropdown on outside click or Escape
+  /* =========================================================
+     FETCH NOTIFICATIONS
+  ========================================================= */
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setNotifications([]);
+      return;
+    }
+
+    const fetchNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+
+        const response =
+          await applicantNotificationService.fetchNotifications(token);
+
+        const data = response.data?.data ?? [];
+
+        const mappedNotifications: AppNotification[] = data.map(
+          (notification: {
+            record_id: number;
+            notification_title: string;
+            notification_body: string;
+            date_created: string;
+            job_id?: number | null;
+            application_id?: number | null;
+          }) => ({
+            id: notification.record_id,
+            title: notification.notification_title,
+            message: notification.notification_body,
+            created_at: notification.date_created,
+            job_id: notification.job_id,
+            application_id: notification.application_id,
+          }),
+        );
+
+        setNotifications(mappedNotifications);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+        setNotifications([]);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, [isAuthenticated]);
+
+  /* =========================================================
+     CLOSE DROPDOWN ON OUTSIDE CLICK / ESCAPE
+  ========================================================= */
+
   useEffect(() => {
     if (!openMenu) return;
 
     const handleClick = (e: MouseEvent) => {
       const ref = openMenu === "profile" ? menuRef : notifRef;
+
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpenMenu(null);
       }
     };
+
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpenMenu(null);
+      if (e.key === "Escape") {
+        setOpenMenu(null);
+      }
     };
 
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleKey);
+
     return () => {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleKey);
     };
   }, [openMenu]);
 
-  const markAsRead = (id: AppNotification["id"]) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-    // TODO: call your API to mark this notification as read
+  /* =========================================================
+     DEACTIVATE NOTIFICATION
+  ========================================================= */
+
+  const deactivateNotification = async (id: number) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) return;
+
+    try {
+      await applicantNotificationService.deactivateNotification(id, token);
+
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== id),
+      );
+    } catch (error) {
+      console.error("Failed to deactivate notification:", error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    // TODO: call your API to mark all notifications as read
+  /* =========================================================
+     OPEN NOTIFICATION
+  ========================================================= */
+
+  const handleNotificationOpen = async (notification: AppNotification) => {
+    setOpenMenu(null);
+
+    if (notification.application_id) {
+      navigate(
+        `/applicant/my_jobs/track_application/${notification.application_id}`,
+      );
+    }
   };
+
+  /* =========================================================
+     LOGOUT
+  ========================================================= */
 
   const handleLogout = async () => {
     const verifyType = localStorage.getItem("verify_type") ?? "applicant";
+
     localStorage.removeItem("token");
     localStorage.removeItem("verify_type");
+
     auth?.setUserData(null);
     setNotifications([]);
+
     // With no token, checkAuth marks the user as unauthenticated
     await auth?.checkAuth(verifyType);
+
     navigate("/applicant");
   };
 
   return (
     <header className="w-full h-[12dvh] bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
       <div className="max-w-8xl mx-auto px-10 h-full">
-        <div className="flex items-center  justify-between h-full">
-          {/* Logo Section */}
-          <div className="flex items-center gap-3 cursor-pointer ">
+        <div className="flex items-center justify-between h-full">
+          {/* =====================================================
+              LOGO SECTION
+          ===================================================== */}
+
+          <div className="flex items-center gap-3 cursor-pointer">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              <img src={logo} className="w-full h-full" />
+              <img
+                src={logo}
+                className="w-full h-full"
+                alt="Profiteknik Corporation"
+              />
             </div>
+
             <span className="text-lg text-[#1C2321] tracking-wide font-medium leading-none">
               Profiteknik{" "}
               <span className="archivo text-base uppercase tracking-widest text-red-800 mt-1">
@@ -178,8 +260,11 @@ function Navbar() {
             </span>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 -ml-30 ">
+          {/* =====================================================
+              NAVIGATION LINKS
+          ===================================================== */}
+
+          <nav className="hidden md:flex items-center gap-8 -ml-30">
             {navItems.map((item) => (
               <NavLink
                 key={item.title}
@@ -192,6 +277,7 @@ function Navbar() {
                 }`}
               >
                 {item.title}
+
                 {activeTab === item.title && (
                   <span className="absolute bottom-0 left-0 w-full h-[2.5px] bg-red-600 rounded-full" />
                 )}
@@ -199,20 +285,26 @@ function Navbar() {
             ))}
           </nav>
 
-          {/* Right Side Actions */}
+          {/* =====================================================
+              RIGHT SIDE ACTIONS
+          ===================================================== */}
+
           <div className="flex items-center gap-6">
             {loading ? (
-              // Placeholder while the token is being verified (keeps layout stable)
+              // Placeholder while the token is being verified
               <div className="w-36 h-10 rounded-xl bg-zinc-200 animate-pulse" />
             ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
-                {/* Notifications + dropdown */}
+                {/* =================================================
+                    NOTIFICATIONS
+                ================================================= */}
+
                 <div ref={notifRef} className="relative">
                   <button
                     type="button"
                     aria-label={
-                      hasUnread
-                        ? `Notifications, ${unreadCount} unread`
+                      hasNotifications
+                        ? `Notifications, ${notificationCount} active`
                         : "Notifications"
                     }
                     aria-haspopup="menu"
@@ -230,10 +322,11 @@ function Navbar() {
                   >
                     <IoNotificationsOutline size={24} />
 
-                    {/* Unread indicator */}
-                    {hasUnread && (
+                    {/* Notification indicator */}
+                    {hasNotifications && (
                       <span className="absolute top-1.5 right-2 flex h-2.5 w-2.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
+
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white" />
                       </span>
                     )}
@@ -242,17 +335,38 @@ function Navbar() {
                   {openMenu === "notifications" && (
                     <NotificationDropdown
                       notifications={notifications}
-                      unreadCount={unreadCount}
-                      onMarkRead={markAsRead}
-                      onMarkAllRead={markAllAsRead}
-                      onOpen={(n) => {
-                        markAsRead(n.id);
-                        setOpenMenu(null);
-                        if (n.link) navigate(n.link);
+                      loading={notificationsLoading}
+                      onOpen={handleNotificationOpen}
+                      onDelete={async (id) => {
+                        const token = localStorage.getItem("token");
+
+                        if (!token) return;
+
+                        try {
+                          await applicantNotificationService.deleteNotification(
+                            id,
+                            token,
+                          );
+
+                          setNotifications((prev) =>
+                            prev.filter(
+                              (notification) => notification.id !== id,
+                            ),
+                          );
+                        } catch (error) {
+                          console.error(
+                            "Failed to delete notification:",
+                            error,
+                          );
+                        }
                       }}
                     />
                   )}
                 </div>
+
+                {/* =================================================
+                    MESSAGES
+                ================================================= */}
 
                 <NavLink
                   to="conversations"
@@ -268,7 +382,10 @@ function Navbar() {
                   <IoChatbubbleEllipsesOutline size={24} />
                 </NavLink>
 
-                {/* Profile + dropdown */}
+                {/* =================================================
+                    PROFILE
+                ================================================= */}
+
                 <div ref={menuRef} className="relative">
                   <button
                     type="button"
@@ -322,91 +439,98 @@ function Navbar() {
 
 type NotificationDropdownProps = {
   notifications: AppNotification[];
-  unreadCount: number;
+  loading: boolean;
   onOpen: (notification: AppNotification) => void;
-  onMarkRead: (id: AppNotification["id"]) => void;
-  onMarkAllRead: () => void;
+  onDelete: (id: number) => void;
 };
 
 function NotificationDropdown({
   notifications,
-  unreadCount,
+  loading,
   onOpen,
-  onMarkAllRead,
+  onDelete,
 }: NotificationDropdownProps) {
   return (
     <div
       role="menu"
       className="w-80 max-w-[calc(100vw-2rem)] bg-[#FAF9F6] border border-[#E3E0D8] rounded-xl shadow-lg absolute top-12 right-0 z-50 overflow-hidden"
     >
-      {/* Header */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <h3 className="archivo text-sm font-bold text-[#1C2321]">
             Notifications
           </h3>
-          {unreadCount > 0 && (
+
+          {notifications.length > 0 && (
             <span className="archivo px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold">
-              {unreadCount} new
+              {notifications.length}
             </span>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={onMarkAllRead}
-          disabled={unreadCount === 0}
-          className="archivo text-xs font-semibold text-[#991B1B] hover:underline disabled:text-[#6B6F76] disabled:no-underline disabled:cursor-not-allowed cursor-pointer"
-        >
-          Mark all as read
-        </button>
       </div>
 
-      {/* List */}
+      {/* =====================================================
+          LIST
+      ===================================================== */}
+
       <div className="max-h-80 overflow-y-auto px-2 pb-2">
-        {notifications.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-[#6B6F76]">
+            <div className="w-7 h-7 rounded-full border-2 border-[#E3E0D8] border-t-red-600 animate-spin" />
+
+            <p className="archivo text-sm">Loading notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-[#6B6F76]">
             <div className="w-11 h-11 rounded-full bg-[#F1EFE9] flex items-center justify-center">
               <IoNotificationsOutline size={20} />
             </div>
+
             <p className="archivo text-sm">You're all caught up</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
-            {notifications.map((n) => (
-              <li key={n.id}>
+            {notifications.map((notification) => (
+              <li key={notification.id} className="group relative">
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => onOpen(n)}
-                  className={`w-full text-left flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors cursor-pointer ${
-                    n.read
-                      ? "hover:bg-[#F1EFE9]"
-                      : "bg-[#FDF2F2] hover:bg-[#FBE7E7]"
-                  }`}
+                  onClick={() => onOpen(notification)}
+                  className="w-full text-left flex items-start gap-3 rounded-lg px-3 py-2.5 pr-10 transition-colors cursor-pointer hover:bg-[#F1EFE9]"
                 >
-                  {/* Unread dot */}
-                  <span
-                    className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
-                      n.read ? "bg-transparent" : "bg-red-600"
-                    }`}
-                  />
+                  {/* Notification dot */}
+                  <span className="mt-1.5 h-2 w-2 rounded-full shrink-0 bg-red-600" />
 
                   <div className="min-w-0 flex-1">
-                    <p
-                      className={`archivo text-sm text-[#1C2321] truncate ${
-                        n.read ? "font-medium" : "font-bold"
-                      }`}
-                    >
-                      {n.title}
+                    <p className="archivo text-sm text-[#1C2321] font-bold truncate">
+                      {notification.title}
                     </p>
+
                     <p className="archivo text-xs text-[#6B6F76] leading-relaxed line-clamp-2">
-                      {n.message}
+                      {notification.message}
                     </p>
+
                     <p className="archivo text-[11px] text-[#6B6F76]/80 mt-1">
-                      {timeAgo(n.created_at)}
+                      {timeAgo(notification.created_at)}
                     </p>
                   </div>
+                </button>
+
+                {/* Delete button */}
+                <button
+                  type="button"
+                  aria-label="Delete notification"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(notification.id);
+                  }}
+                  className="absolute right-2 top-2.5 w-7 h-7 rounded-md flex items-center justify-center text-[#6B6F76] opacity-0 group-hover:opacity-100 hover:bg-[#FEE2E2] hover:text-[#991B1B] transition-all cursor-pointer"
+                >
+                  ×
                 </button>
               </li>
             ))}
@@ -464,7 +588,10 @@ function DropdownMenu({
       role="menu"
       className="w-64 bg-[#FAF9F6] border border-[#E3E0D8] rounded-xl shadow-lg absolute top-12 right-0 z-50 p-3 flex flex-col gap-2"
     >
-      {/* User Header */}
+      {/* =====================================================
+          USER HEADER
+      ===================================================== */}
+
       <div className="flex items-center gap-3 p-2 bg-[#F1EFE9] rounded-lg border border-[#E3E0D8]/60">
         <div className="w-10 h-10 rounded-full border border-[#E3E0D8] bg-[#FAF9F6] overflow-hidden flex items-center justify-center shrink-0">
           {imageUrl ? (
@@ -479,10 +606,12 @@ function DropdownMenu({
             </span>
           )}
         </div>
+
         <div className="flex flex-col min-w-0">
           <p className="font-serif text-sm font-medium text-[#1C2321] truncate">
             {user || "Loading..."}
           </p>
+
           <p className="archivo text-[10px] uppercase tracking-wider text-[#6B6F76] font-semibold truncate">
             {role ? CapitalizeFirst(role) : "Loading..."}
           </p>
@@ -491,7 +620,10 @@ function DropdownMenu({
 
       <div className="h-[1px] bg-[#E3E0D8] my-0.5" />
 
-      {/* Navigation Actions */}
+      {/* =====================================================
+          NAVIGATION ACTIONS
+      ===================================================== */}
+
       <div className="flex flex-col gap-1">
         {menu.map((item, idx) => (
           <button
@@ -518,8 +650,10 @@ function DropdownMenu({
               >
                 {item.icon}
               </div>
+
               <span className="archivo text-xs font-medium">{item.title}</span>
             </div>
+
             <MdOutlineChevronRight
               size={16}
               className={`transition-transform group-hover:translate-x-0.5 ${

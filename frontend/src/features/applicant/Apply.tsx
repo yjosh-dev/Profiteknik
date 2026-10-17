@@ -1,12 +1,50 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { MdCheckCircle, MdError } from "react-icons/md";
 
 import { jobListingService } from "../../service/api/applicants/jobListingService";
 import { applicantApplicationService } from "../../service/api/applicants/applicantApplicationService";
 import JobDetailPanel from "../../components/common/JobDetail";
+import StatusModal from "../../components/ui/StatusModal";
 import type { JobDetail } from "../../types/JobDetailType";
 
 import logo from "../../assets/logo/profiteknik_logo_only.svg";
+
+type ModalState = {
+  heading: string;
+  description: string;
+  icon: React.ReactNode;
+  button_name: string;
+  button_color: string;
+  onClick: () => void;
+};
+
+const RED_BUTTON = "bg-red-700 text-white hover:bg-red-800";
+const GREEN_BUTTON = "bg-green-600 text-white hover:bg-green-700";
+
+// Pull the real message from the backend response, fall back to a generic one
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+
+    // Laravel validation errors: { message, errors: { field: ["msg"] } }
+    if (data?.errors) {
+      const firstError = Object.values(data.errors).flat()[0];
+      if (typeof firstError === "string") return firstError;
+    }
+
+    if (typeof data?.message === "string" && data.message) {
+      return data.message;
+    }
+
+    // No response at all means a real network problem
+    if (!error.response) {
+      return "Unable to reach the server. Please check your internet connection.";
+    }
+  }
+  return fallback;
+};
 
 export default function Apply() {
   const { job_id } = useParams<{ job_id: string }>();
@@ -19,6 +57,49 @@ export default function Apply() {
   // Form state
   const [answers, setAnswers] = useState<Record<number, string>>({});
 
+  // Status modal state
+  const [modal, setModal] = useState<ModalState | null>(null);
+
+  const closeModal = () => setModal(null);
+
+  const showError = (
+    heading: string,
+    description: string,
+    onClose?: () => void,
+    button_name = "Okay",
+  ) => {
+    setModal({
+      heading,
+      description,
+      icon: <MdError className="text-red-700" />,
+      button_name,
+      button_color: RED_BUTTON,
+      onClick: () => {
+        closeModal();
+        onClose?.();
+      },
+    });
+  };
+
+  const showSuccess = (
+    heading: string,
+    description: string,
+    onClose?: () => void,
+    button_name = "Continue",
+  ) => {
+    setModal({
+      heading,
+      description,
+      icon: <MdCheckCircle className="text-green-600" />,
+      button_name,
+      button_color: GREEN_BUTTON,
+      onClick: () => {
+        closeModal();
+        onClose?.();
+      },
+    });
+  };
+
   // Fetch job details on load
   useEffect(() => {
     if (!job_id) return;
@@ -30,6 +111,13 @@ export default function Apply() {
         setJob(response.data.data || response.data);
       } catch (error) {
         console.error("Failed to load job details:", error);
+        showError(
+          "Unable to load job",
+          getErrorMessage(
+            error,
+            "We couldn't load the job details. Please check your connection and try again.",
+          ),
+        );
       } finally {
         setLoading(false);
       }
@@ -53,10 +141,12 @@ export default function Apply() {
       localStorage.getItem("token") || localStorage.getItem("ACCESS_TOKEN");
 
     if (!token) {
-      alert(
+      showError(
+        "Session expired",
         "Your session has expired or you are not logged in. Please log in again.",
+        () => navigate("/login"),
+        "Go to Login",
       );
-      navigate("/login");
       return;
     }
 
@@ -76,17 +166,57 @@ export default function Apply() {
 
       await applicantApplicationService.applyJob(job_id, payload, token);
 
-      alert("Application submitted successfully!");
-      navigate(-2);
+      showSuccess(
+        "Application submitted",
+        "Your application has been sent to the hiring team. Good luck!",
+        () => navigate(-2),
+        "Done",
+      );
     } catch (error) {
       console.error("Failed to submit application:", error);
-      alert(
-        "Failed to submit application. Please check your network or try again.",
+
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+
+      // Expired or invalid token
+      if (status === 401) {
+        showError(
+          "Session expired",
+          "Your session has expired. Please log in again.",
+          () => navigate("/login"),
+          "Go to Login",
+        );
+        return;
+      }
+
+      showError(
+        status === 409 || status === 400
+          ? "Unable to apply"
+          : "Submission failed",
+        getErrorMessage(
+          error,
+          "We couldn't submit your application. Please try again.",
+        ),
       );
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Modal overlay, rendered in every non-loading view
+  const modalOverlay = modal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+      <StatusModal
+        heading={modal.heading}
+        description={modal.description}
+        icon={modal.icon}
+        button_name={modal.button_name}
+        button_color={modal.button_color}
+        onClick={modal.onClick}
+      />
+    </div>
+  );
 
   if (loading) {
     return (
@@ -112,6 +242,7 @@ export default function Apply() {
         >
           Go Back
         </button>
+        {modalOverlay}
       </div>
     );
   }
@@ -208,6 +339,8 @@ export default function Apply() {
           <JobDetailPanel job={job} />
         </div>
       </div>
+
+      {modalOverlay}
     </div>
   );
 }

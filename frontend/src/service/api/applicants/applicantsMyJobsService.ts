@@ -20,4 +20,11 @@ export const applicantsMyJobService = {
     axiosClient.get("/applicant/my-jobs/interview", {
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  fetchApplicationTracking: async (applicationId: number, token: string) =>
+    axiosClient.get(`/applicant/application/${applicationId}/tracking`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }),
 };

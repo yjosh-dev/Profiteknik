@@ -83,8 +83,8 @@ function App() {
                 <Route path="/applicant/my_jobs" element={<MyJobs />}>
                   <Route path="pending_jobs" element={<PendingJobs />} />
                   <Route path="shortlisted_jobs" element={<ShortlistedJobs />} />
-                  <Route path="interview_jobs" element={<InterviewJobs />} />
-                  <Route path="track_application" element={<ApplicationTracker />} />
+                  <Route path="interview_jobs/" element={<InterviewJobs />} />
+                  <Route path="track_application/:applicationId" element={<ApplicationTracker />} />
                 </Route>
               </Route>
             </Route>

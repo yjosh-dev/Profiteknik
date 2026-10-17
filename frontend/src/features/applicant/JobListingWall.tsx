@@ -1,7 +1,7 @@
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
+import logo from "../../assets/logo/profiteknik_logo_only.svg";
 import {
   FaLocationDot,
   FaBriefcase,
@@ -78,7 +78,7 @@ export default function JobListingWall() {
       try {
         setLoadingDetail(true);
         setDetailError(false);
-        const res = await jobListingService.fetchJobListing(selectedJobId)
+        const res = await jobListingService.fetchJobListing(selectedJobId);
         if (!cancelled) setJobDetail(res.data);
       } catch (err) {
         console.error(err);
@@ -178,9 +178,12 @@ export default function JobListingWall() {
       {/* LISTING INFORMATION */}
       <div className="w-[35%] max-h-full bg-white border border-gray-200 rounded-xl shadow-sm">
         {loadingDetail ? (
-          <JobCardSkeleton/>
+          <JobCardSkeleton />
         ) : jobDetail ? (
-          <JobDetailPanel job={jobDetail} onApply={() => navigate(`/applicant/${selectedJobId}/apply`)} />
+          <JobDetailPanel
+            job={jobDetail}
+            onApply={() => navigate(`/applicant/${selectedJobId}/apply`)}
+          />
         ) : (
           <div className="h-full flex items-center justify-center px-10 text-center">
             <p className="archivo text-sm text-zinc-500">
@@ -309,6 +312,18 @@ function JobSalaryFilter() {
   );
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.max(1, Math.floor(diffMs / 60000));
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+const number = new Intl.NumberFormat("en-PH", { maximumFractionDigits: 0 });
+
 function JobCard({
   job_id,
   selected = false,
@@ -320,6 +335,7 @@ function JobCard({
   experience_required,
   min_salary,
   max_salary,
+  posted_at,
 }: {
   job_id: string;
   selected?: boolean;
@@ -331,8 +347,9 @@ function JobCard({
   experience_required: string;
   min_salary: number;
   max_salary: number;
+  posted_at: string;
 }) {
-  const salaryRange = `${min_salary} - ${max_salary}`;
+  const salaryRange = `${number.format(min_salary)} - ${number.format(max_salary)}`;
   const experience = `${experience_required}+ years`;
 
   return (
@@ -348,49 +365,56 @@ function JobCard({
           onSelect(job_id);
         }
       }}
-      className={`w-full rounded-md border shadow-sm py-5 flex flex-col items-center cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+      className={`w-full rounded-xl border bg-white py-5 flex flex-col cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
         selected
-          ? "border-red-700 ring-1 ring-red-700"
-          : "border-gray-200 hover:border-gray-300"
+          ? "border-red-700 ring-1 ring-red-700 shadow-sm"
+          : "border-zinc-200 shadow-xs hover:border-zinc-300"
       }`}
     >
-      <div className="w-full flex justify-between px-5 gap-4 mb-3">
-        <div className="flex gap-2 h-auto">
-          <div className="w-13 h-13 rounded-md bg-zinc-700 shadow-sm"></div>
-          <div className="flex flex-col">
-            <p className="archivo font-medium ">{job_title}</p>
-            <p className="archivo font-normal text-sm text-zinc-600">
+      {/* Header */}
+      <div className="w-full flex justify-between items-start px-5 gap-4 mb-3">
+        <div className="flex gap-3 min-w-0">
+          <div className="w-12 h-12 shrink-0 rounded-md bg-white ring-1 ring-zinc-200 shadow-sm p-2 flex items-center justify-center">
+            <img src={logo} alt="" className="w-full h-full object-contain" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <p className="archivo font-semibold text-zinc-900 truncate">
+              {job_title}
+            </p>
+            <p className="archivo font-normal text-sm text-zinc-600 truncate">
               {location}
             </p>
           </div>
         </div>
-        <div className="flex items-center h-full justify-center ">
-          <p className="archivo text-sm font-normal text-zinc-500">
-            Posted 3 hours ago
-          </p>
-        </div>
+        <p className="archivo shrink-0 text-sm font-normal text-zinc-500">
+          <p>Posted 3 hours ago</p>
+        </p>
       </div>
-      <div className="w-full py-2 px-5 mb-3">
-        <p className="archivo text-sm text-zinc-500 line-clamp-4 text-justify">
+
+      {/* Description */}
+      <div className="w-full px-5 mb-4">
+        <p className="archivo text-sm text-zinc-500 line-clamp-4 leading-relaxed">
           {job_description}
         </p>
       </div>
-      <div className="w-[95%] h-12 border-t border-zinc-300 grid grid-cols-4 px-2 ">
-        <div className="flex items-center  gap-1">
-          <FaLocationDot color="#b8b6b6" />
-          <p className="archivo text-zinc-500 text-sm">{location}</p>
+
+      {/* Footer */}
+      <div className="mx-5 pt-3.5 border-t border-zinc-200 grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <FaLocationDot className="shrink-0" color="#b8b6b6" />
+          <p className="archivo text-zinc-500 text-sm truncate">{location}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <FaBriefcase color="#b8b6b6" />
-          <p className="archivo text-zinc-500 text-sm">{job_type}</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <FaBriefcase className="shrink-0" color="#b8b6b6" />
+          <p className="archivo text-zinc-500 text-sm truncate">{job_type}</p>
         </div>
-        <div className="flex items-center  gap-2">
-          <FaHelmetSafety color="#b8b6b6" />
-          <p className="archivo text-zinc-500 text-sm">{experience}</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <FaHelmetSafety className="shrink-0" color="#b8b6b6" />
+          <p className="archivo text-zinc-500 text-sm truncate">{experience}</p>
         </div>
-        <div className="flex items-center gap-1">
-          <FaPesoSign color="#b8b6b6" />
-          <p className="archivo text-zinc-500 text-sm font-semibold">
+        <div className="flex items-center gap-1 min-w-0">
+          <FaPesoSign className="shrink-0" color="#b8b6b6" />
+          <p className="archivo text-zinc-500 text-sm font-semibold truncate">
             {salaryRange}
           </p>
         </div>

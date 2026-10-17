@@ -6,6 +6,7 @@ import ScreenApplicants from "../../../features/employee/Applications/ScreenAppl
 import Dialog from "../../../components/ui/Dialog";
 
 import { applicantScreeningService } from "../../../service/api/employee/applicantScreeningService";
+import StatusChangeModal from "../../../components/common/ChangeStatusModal";
 
 function getStatusLabel(status?: string): string {
   switch (status?.toLowerCase()) {
@@ -168,7 +169,7 @@ export function ApplicationLayout() {
 
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
-
+  const [statusFrom, setStatusFrom] = useState<string | null>(null);
   // --------------------------------------------------
   // NOTES
   // --------------------------------------------------
@@ -200,11 +201,10 @@ export function ApplicationLayout() {
         setLoading(true);
         setError(null);
 
-        const response =
-          await applicantScreeningService.getScreeningDetails(
-            jobId,
-            applicantId,
-          );
+        const response = await applicantScreeningService.getScreeningDetails(
+          jobId,
+          applicantId,
+        );
 
         setScreeningData(response.data.data as any);
       } catch (err: any) {
@@ -226,33 +226,26 @@ export function ApplicationLayout() {
 
   const handleStatusUpdate = (newStatus: string) => {
     if (!screeningData?.application_id) return;
+    if (newStatus === screeningData.status) return; // nothing to change
 
+    setStatusFrom(screeningData.status);
     setPendingStatus(newStatus);
     setStatusDialogOpen(true);
   };
 
+  // Throws on failure; the modal shows the error and a retry button
   const confirmStatusUpdate = async () => {
     if (!pendingStatus || !screeningData?.application_id) return;
 
-    try {
-      await applicantScreeningService.updateStatus(
-        screeningData.application_id,
-        pendingStatus,
-      );
+    await applicantScreeningService.updateStatus(
+      screeningData.application_id,
+      pendingStatus,
+    );
 
-      setScreeningData((prev: any) => ({
-        ...prev,
-        status: pendingStatus,
-      }));
-
-      setStatusDialogOpen(false);
-      setPendingStatus(null);
-    } catch (err) {
-      console.error("Failed to update applicant status", err);
-    }
+    setScreeningData((prev: any) => ({ ...prev, status: pendingStatus }));
   };
 
-  const cancelStatusUpdate = () => {
+  const closeStatusModal = () => {
     setStatusDialogOpen(false);
     setPendingStatus(null);
   };
@@ -513,22 +506,12 @@ export function ApplicationLayout() {
           STATUS CONFIRMATION DIALOG
       ====================================================== */}
 
-      <Dialog
+      <StatusChangeModal
         isOpen={statusDialogOpen}
-        onClose={cancelStatusUpdate}
+        currentStatus={statusFrom}
+        newStatus={pendingStatus}
         onConfirm={confirmStatusUpdate}
-        heading="Change Applicant Status?"
-        description={`Are you sure you want to change this applicant's status to "${getStatusLabel(
-          pendingStatus || "",
-        )}"?`}
-        confirmText="Confirm"
-        cancelText="Cancel"
-        confirmColor="bg-emerald-600 hover:bg-emerald-700 text-white"
-        icon={
-          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-            <CheckIcon />
-          </div>
-        }
+        onClose={closeStatusModal}
       />
     </>
   );

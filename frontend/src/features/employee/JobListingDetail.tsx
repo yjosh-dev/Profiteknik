@@ -6,16 +6,20 @@ import { jobListingApi } from "../../service/api/employee/jobListingService";
 import { JobApplicationService } from "../../service/api/employee/JobApplicationService";
 import type { JobListingDetailData } from "../../types/JobListingTypes";
 
+import ApplicationFilters, {
+  useApplicationFilters,
+} from "../../components/common/ApplicationFilter";
+
 import { IoReturnUpBackSharp } from "react-icons/io5";
 import { FaRegEdit } from "react-icons/fa";
 import { MdDelete, MdKeyboardArrowDown } from "react-icons/md";
 
-// Once the top section has been pushed up by this fraction of its height,
-// it disappears and an "Expand" bar takes its place.
 const COLLAPSE_RATIO = 0.6;
 
 export default function JobListingDetail() {
-  const [jobListingData, setJobListingData] = useState<JobListingDetailData>();
+  const [jobListingData, setJobListingData] =
+    useState<JobListingDetailData>();
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,8 +34,8 @@ export default function JobListingDetail() {
 
   // Resize state
   const topInnerRef = useRef<HTMLDivElement>(null);
-  const [topOffset, setTopOffset] = useState<number>(0); // px the top section is pushed up
-  const [naturalTop, setNaturalTop] = useState<number>(0); // full height of top section
+  const [topOffset, setTopOffset] = useState<number>(0);
+  const [naturalTop, setNaturalTop] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [topCollapsed, setTopCollapsed] = useState<boolean>(false);
 
@@ -40,36 +44,67 @@ export default function JobListingDetail() {
 
   const navigate = useNavigate();
 
+  /*
+  |--------------------------------------------------------------------------
+  | Fetch Job Details
+  |--------------------------------------------------------------------------
+  */
+
   const fetchJobDetail = async (id: string | null) => {
     if (!id) return;
+
     try {
       setLoading(true);
       setError(null);
-      const data = await jobListingApi.getJobListing(Number(id));
-      setJobListingData(data.data);
+
+      const response = await jobListingApi.getJobListing(
+        Number(id)
+      );
+
+      setJobListingData(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch job details.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to fetch job details."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  /*
+  |--------------------------------------------------------------------------
+  | Fetch Applications
+  |--------------------------------------------------------------------------
+  */
+
   const fetchApplications = async (id: string | null) => {
     if (!id) return;
+
     try {
       setAppsLoading(true);
       setAppsError(null);
-      const res = await JobApplicationService.fetchApplications(id);
+
+      const res =
+        await JobApplicationService.fetchApplications(id);
+
       setApplications(res.data);
       setCurrentPage(1);
     } catch (err: any) {
       setAppsError(
-        err.response?.data?.message || "Failed to fetch applications.",
+        err.response?.data?.message ||
+          "Failed to fetch applications."
       );
     } finally {
       setAppsLoading(false);
     }
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Initial Data Fetch
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
     if (job_id) {
@@ -78,15 +113,37 @@ export default function JobListingDetail() {
     }
   }, [job_id]);
 
-  // ---- Resize handlers ----
+  /*
+  |--------------------------------------------------------------------------
+  | Filters
+  |--------------------------------------------------------------------------
+  */
+
+  const appFilters = useApplicationFilters(applications);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [appFilters.filtersKey]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Resize Handlers
+  |--------------------------------------------------------------------------
+  */
+
   const resetTop = () => {
     setTopOffset(0);
     setTopCollapsed(false);
   };
 
-  const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const startDrag = (
+    e: ReactPointerEvent<HTMLDivElement>
+  ) => {
     e.preventDefault();
-    const natural = topInnerRef.current?.offsetHeight ?? 0;
+
+    const natural =
+      topInnerRef.current?.offsetHeight ?? 0;
+
     if (!natural) return;
 
     setNaturalTop(natural);
@@ -96,8 +153,12 @@ export default function JobListingDetail() {
     const startOffset = topOffset;
 
     function onMove(ev: PointerEvent) {
-      // Dragging up grows the bottom panel; dragging down shrinks it back.
-      const next = Math.max(0, startOffset + (startY - ev.clientY));
+      // Dragging up grows the bottom panel;
+      // dragging down shrinks it back.
+      const next = Math.max(
+        0,
+        startOffset + (startY - ev.clientY)
+      );
 
       if (next >= natural * COLLAPSE_RATIO) {
         setTopCollapsed(true);
@@ -105,20 +166,50 @@ export default function JobListingDetail() {
         stop();
         return;
       }
+
       setTopOffset(next);
     }
 
     function stop() {
       setIsDragging(false);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
+
+      window.removeEventListener(
+        "pointermove",
+        onMove
+      );
+
+      window.removeEventListener(
+        "pointerup",
+        stop
+      );
+
+      window.removeEventListener(
+        "pointercancel",
+        stop
+      );
     }
 
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", stop);
+    window.addEventListener(
+      "pointermove",
+      onMove
+    );
+
+    window.addEventListener(
+      "pointerup",
+      stop
+    );
+
+    window.addEventListener(
+      "pointercancel",
+      stop
+    );
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Loading / Error States
+  |--------------------------------------------------------------------------
+  */
 
   if (loading) {
     return (
@@ -133,7 +224,9 @@ export default function JobListingDetail() {
   if (error) {
     return (
       <div className="w-full h-screen flex items-center justify-center p-12 bg-[#FAF9F6]">
-        <span className="archivo text-sm text-[#991B1B]">{error}</span>
+        <span className="archivo text-sm text-[#991B1B]">
+          {error}
+        </span>
       </div>
     );
   }
@@ -141,55 +234,115 @@ export default function JobListingDetail() {
   if (!jobListingData) {
     return (
       <div className="w-full h-screen flex items-center justify-center p-12 bg-[#FAF9F6]">
-        <span className="archivo text-sm text-[#6B6F76]">No job selected.</span>
+        <span className="archivo text-sm text-[#6B6F76]">
+          No job selected.
+        </span>
       </div>
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Analytics
+  |--------------------------------------------------------------------------
+  */
+
+  const analytics = jobListingData.analytics;
+
+  const applicantBars =
+    analytics?.applicants_per_day ?? [];
+
+  const maxApplicants = Math.max(
+    ...applicantBars.map(
+      (item) => item.count
+    ),
+    1
+  );
+
+  /*
+  |--------------------------------------------------------------------------
+  | Styling Helpers
+  |--------------------------------------------------------------------------
+  */
+
   const labelClass =
     "archivo text-[11px] font-semibold uppercase tracking-wider text-[#6B6F76] mb-1 block";
 
-  const statusStyle = (status: string) => {
+  const statusStyle = (
+    status?: string | null
+  ) => {
     switch (status?.toLowerCase()) {
       case "shortlisted":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
+
       case "under review":
       case "pending":
         return "bg-amber-50 text-amber-700 border-amber-200";
+
       case "rejected":
         return "bg-rose-50 text-rose-700 border-rose-200";
+
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
-  const totalItems = applications.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentApplicants = applications.slice(
-    startIndex,
-    startIndex + itemsPerPage,
+  /*
+  |--------------------------------------------------------------------------
+  | Pagination
+  |--------------------------------------------------------------------------
+  */
+
+  const totalItems =
+    appFilters.filtered.length;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      totalItems / itemsPerPage
+    )
   );
 
+  const startIndex =
+    (currentPage - 1) *
+    itemsPerPage;
+
+  const currentApplicants =
+    appFilters.filtered.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+
   const isResized = topOffset > 0;
+
+  /*
+  |--------------------------------------------------------------------------
+  | Render
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <div
       className={`w-full h-screen p-6 bg-[#FAF9F6] flex flex-col overflow-hidden ${
-        isDragging ? "select-none cursor-row-resize" : ""
+        isDragging
+          ? "select-none cursor-row-resize"
+          : ""
       }`}
     >
-      {/* TOP SECTION (buttons + job overview), or the Expand bar once collapsed */}
+      {/* TOP SECTION */}
       {topCollapsed ? (
         <div className="w-full bg-white border border-[#E3E0D8] rounded-xl px-5 py-3 shadow-sm flex items-center justify-between gap-4 shrink-0">
           <div className="min-w-0">
             <span className="archivo text-[10px] text-[#6B6F76] font-medium block">
-              Job Listing #{jobListingData.job_id}
+              Job Listing #
+              {jobListingData.job_id}
             </span>
+
             <h1 className="archivo text-base text-[#1C2321] font-bold truncate">
               {jobListingData.job_title}
             </h1>
           </div>
+
           <button
             onClick={resetTop}
             className="archivo shrink-0 px-4 py-2 rounded-md border border-[#D8D5CD] bg-white shadow-sm flex items-center gap-1 text-sm font-medium text-[#1C2321] hover:bg-[#FAF9F6] transition"
@@ -200,47 +353,81 @@ export default function JobListingDetail() {
         </div>
       ) : (
         <div
-          className={`shrink-0 ${isResized ? "overflow-hidden" : ""} ${
-            isDragging ? "" : "transition-[height] duration-200"
+          className={`shrink-0 ${
+            isResized
+              ? "overflow-hidden"
+              : ""
+          } ${
+            isDragging
+              ? ""
+              : "transition-[height] duration-200"
           }`}
-          style={isResized ? { height: naturalTop - topOffset } : undefined}
+          style={
+            isResized
+              ? {
+                  height:
+                    naturalTop -
+                    topOffset,
+                }
+              : undefined
+          }
         >
           <div
             ref={topInnerRef}
             className={`flex flex-col gap-6 ${
-              isDragging ? "" : "transition-transform duration-200"
+              isDragging
+                ? ""
+                : "transition-transform duration-200"
             }`}
-            style={{ transform: `translateY(-${topOffset}px)` }}
+            style={{
+              transform: `translateY(-${topOffset}px)`,
+            }}
           >
+            {/* Action Buttons */}
             <div className="w-full px-3 flex justify-end gap-3">
               <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
-                <FaRegEdit size={18} color="bg-zinc-200" />
+                <FaRegEdit
+                  size={18}
+                  color="bg-zinc-200"
+                />
+
                 <p className="archivo font-medium text-sm text-zinc-600">
                   Edit
                 </p>
               </button>
+
               <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
-                <MdDelete size={18} color="" />
+                <MdDelete size={18} />
+
                 <p className="archivo font-medium text-sm text-zinc-600">
                   Delete
                 </p>
               </button>
+
               <button
                 className="w-24 py-2 rounded-md border border-gray-200 shadow-sm flex items-center justify-center hover:scale-110 hover:bg-gray-100 transition"
-                onClick={() => navigate(-1)}
+                onClick={() =>
+                  navigate(-1)
+                }
               >
-                <IoReturnUpBackSharp size={21} />
+                <IoReturnUpBackSharp
+                  size={21}
+                />
               </button>
             </div>
 
+            {/* Job Overview */}
             <div className="w-full bg-white border border-[#E3E0D8] rounded-xl p-5 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6">
+
               {/* Left: Job Information */}
               <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:pr-6 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="archivo text-xs text-[#6B6F76] font-medium">
-                      Job Listing #{jobListingData.job_id}
+                      Job Listing #
+                      {jobListingData.job_id}
                     </span>
+
                     <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                       Active
                     </span>
@@ -252,31 +439,62 @@ export default function JobListingDetail() {
 
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
-                      <span className={labelClass}>Employment Type</span>
+                      <span
+                        className={labelClass}
+                      >
+                        Employment Type
+                      </span>
+
                       <span className="text-xs font-semibold text-[#1C2321]">
-                        {jobListingData.employment_type}
+                        {
+                          jobListingData.employment_type
+                        }
                       </span>
                     </div>
+
                     <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
-                      <span className={labelClass}>Vacant Positions</span>
+                      <span
+                        className={labelClass}
+                      >
+                        Vacant Positions
+                      </span>
+
                       <span className="text-xs font-semibold text-[#1C2321]">
-                        {jobListingData.vacant_position} Position(s)
+                        {
+                          jobListingData.vacant_position
+                        }{" "}
+                        Position(s)
                       </span>
                     </div>
                   </div>
 
                   <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] mb-2">
-                    <span className={labelClass}>Salary Range</span>
+                    <span
+                      className={labelClass}
+                    >
+                      Salary Range
+                    </span>
+
                     <span className="text-xs font-bold text-[#991B1B]">
-                      ₱{jobListingData.minimum_salary.toLocaleString()} – ₱
+                      ₱
+                      {jobListingData.minimum_salary.toLocaleString()}
+                      {" – "}
+                      ₱
                       {jobListingData.maximum_salary.toLocaleString()}
                     </span>
                   </div>
 
                   <div>
-                    <span className={labelClass}>Description</span>
+                    <span
+                      className={labelClass}
+                    >
+                      Description
+                    </span>
+
                     <p className="text-xs text-[#1C2321] bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] leading-relaxed line-clamp-2">
-                      {jobListingData.job_description}
+                      {
+                        jobListingData.job_description
+                      }
                     </p>
                   </div>
                 </div>
@@ -284,83 +502,159 @@ export default function JobListingDetail() {
                 <div className="mt-2 pt-2 border-t border-[#E3E0D8] flex justify-between text-[10px] text-[#6B6F76] archivo">
                   <span>
                     Posted:{" "}
-                    {new Date(jobListingData.posted_at).toLocaleDateString()}
+                    {new Date(
+                      jobListingData.posted_at
+                    ).toLocaleDateString()}
                   </span>
+
                   <span>
                     Until:{" "}
-                    {new Date(jobListingData.posted_until).toLocaleDateString()}
+                    {new Date(
+                      jobListingData.posted_until
+                    ).toLocaleDateString()}
                   </span>
                 </div>
               </div>
 
-              {/* Center: Statistics Grid */}
+              {/* Center: Statistics */}
               <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:px-6 flex flex-col justify-between">
                 <div>
                   <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76] mb-3">
-                    Mock Statistics
+                    Application Statistics
                   </h3>
+
                   <div className="grid grid-cols-2 gap-2.5">
+
+                    {/* Total Applicants */}
                     <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                      <span className={labelClass}>Total Applicants</span>
+                      <span className={labelClass}>
+                        Total Applicants
+                      </span>
+
                       <div className="flex items-baseline justify-between mt-1">
                         <span className="text-xl font-bold text-[#1C2321]">
-                          48
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-medium">
-                          +12%
+                          {
+                            analytics?.total_applicants ??
+                            0
+                          }
                         </span>
                       </div>
                     </div>
 
+                    {/* Shortlisted */}
                     <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                      <span className={labelClass}>Shortlisted</span>
+                      <span className={labelClass}>
+                        Shortlisted
+                      </span>
+
                       <div className="flex items-baseline justify-between mt-1">
                         <span className="text-xl font-bold text-[#1C2321]">
-                          12
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-medium">
-                          +3 this week
+                          {
+                            analytics?.shortlisted ??
+                            0
+                          }
                         </span>
                       </div>
                     </div>
 
+                    {/* Under Review */}
                     <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                      <span className={labelClass}>Under Review</span>
+                      <span className={labelClass}>
+                        Under Review
+                      </span>
+
                       <div className="flex items-baseline justify-between mt-1">
                         <span className="text-xl font-bold text-[#1C2321]">
-                          28
+                          {
+                            analytics?.under_review ??
+                            0
+                          }
                         </span>
+
                         <span className="text-[10px] text-[#6B6F76]">
                           Pending
                         </span>
                       </div>
                     </div>
 
+                    {/* Conversion Rate */}
                     <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
-                      <span className={labelClass}>Conversion Rate</span>
+                      <span className={labelClass}>
+                        Conversion Rate
+                      </span>
+
                       <div className="flex items-baseline justify-between mt-1">
                         <span className="text-xl font-bold text-[#991B1B]">
-                          25%
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-medium">
-                          High
+                          {
+                            analytics?.conversion_rate ??
+                            0
+                          }
+                          %
                         </span>
                       </div>
                     </div>
+
+                    {/* Rejected */}
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>
+                        Rejected
+                      </span>
+
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#1C2321]">
+                          {
+                            analytics?.rejected ??
+                            0
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Interview */}
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E3E0D8] hover:border-[#D8D5CD] transition-colors">
+                      <span className={labelClass}>
+                        Interview
+                      </span>
+
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl font-bold text-[#1C2321]">
+                          {
+                            analytics?.interview ??
+                            0
+                          }
+                        </span>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Minimum Qualifications preview */}
+                {/* Qualifications */}
                 {jobListingData.requirements && (
                   <div className="mt-2 bg-[#FAF9F6] p-2 rounded-xl border border-[#E3E0D8]">
-                    <span className={labelClass}>Qualifications</span>
+                    <span
+                      className={labelClass}
+                    >
+                      Qualifications
+                    </span>
+
                     <div className="flex justify-between text-xs text-[#1C2321] font-medium">
                       <span>
                         Education:{" "}
-                        {jobListingData.requirements.highest_education}
+                        {
+                          jobListingData
+                            .requirements
+                            .highest_education
+                        }
                       </span>
+
                       <span>
-                        Experience: {jobListingData.requirements.experience}{" "}
+                        Experience:{" "}
+                        {
+                          jobListingData
+                            .requirements
+                            .experience
+                        }{" "}
                         yr(s)
                       </span>
                     </div>
@@ -368,50 +662,90 @@ export default function JobListingDetail() {
                 )}
               </div>
 
-              {/* Right: Applicants Per Day Graph */}
+              {/* Right: Weekly Applicants Graph */}
               <div className="lg:col-span-4 lg:pl-2 flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76]">
-                      Applicants Per Day
-                    </h3>
+                    <div>
+                      <h3 className="archivo text-xs font-bold uppercase tracking-wider text-[#6B6F76]">
+                        Applicants Per Day
+                      </h3>
+
+                      <p className="text-[10px] text-[#8A8F98] mt-1">
+                        Application activity this week
+                      </p>
+                    </div>
+
                     <span className="text-[10px] text-[#6B6F76] bg-[#FAF9F6] px-2 py-0.5 rounded border border-[#E3E0D8]">
-                      This Week
+                      Mon – Sun
                     </span>
                   </div>
 
                   <div className="bg-[#FAF9F6] h-40 rounded-xl border border-[#E3E0D8] p-3 flex items-end justify-between gap-2">
-                    {[
-                      { day: "Mon", count: 8, height: "h-[40%]" },
-                      { day: "Tue", count: 14, height: "h-[70%]" },
-                      { day: "Wed", count: 20, height: "h-[100%]" },
-                      { day: "Thu", count: 10, height: "h-[50%]" },
-                      { day: "Fri", count: 6, height: "h-[30%]" },
-                    ].map((bar) => (
-                      <div
-                        key={bar.day}
-                        className="flex-1 flex flex-col items-center gap-1 h-full justify-end group"
-                      >
-                        <span className="text-[10px] font-semibold text-[#1C2321] group-hover:text-[#991B1B] transition-colors">
-                          {bar.count}
-                        </span>
-                        <div
-                          className={`w-full bg-[#991B1B] group-hover:bg-[#7F1D1D] rounded-t-sm transition-all ${bar.height}`}
-                        />
-                        <span className="archivo text-[9px] text-[#6B6F76] font-medium">
-                          {bar.day}
+
+                    {applicantBars.length ===
+                    0 ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-[10px] text-[#6B6F76]">
+                          No application data available
                         </span>
                       </div>
-                    ))}
+                    ) : (
+                      applicantBars.map(
+                        (bar) => {
+                          const heightPercentage =
+                            bar.count ===
+                            0
+                              ? 0
+                              : Math.max(
+                                  (bar.count /
+                                    maxApplicants) *
+                                    100,
+                                  8
+                                );
+
+                          return (
+                            <div
+                              key={
+                                bar.date
+                              }
+                              className="flex-1 flex flex-col items-center gap-1 h-full justify-end group min-w-0"
+                            >
+                              {/* Count */}
+                              <span className="text-[10px] font-semibold text-[#1C2321] group-hover:text-[#991B1B] transition-colors">
+                                {
+                                  bar.count
+                                }
+                              </span>
+
+                              {/* Bar */}
+                              <div
+                                className="w-full bg-[#991B1B] group-hover:bg-[#7F1D1D] rounded-t-sm transition-all"
+                                style={{
+                                  height: `${heightPercentage}%`,
+                                }}
+                              />
+
+                              {/* Day */}
+                              <span className="archivo text-[9px] text-[#6B6F76] font-medium">
+                                {bar.day}
+                              </span>
+                            </div>
+                          );
+                        }
+                      )
+                    )}
+
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
       )}
 
-      {/* RESIZE HANDLE (hidden once the top section is collapsed) */}
+      {/* RESIZE HANDLE */}
       {!topCollapsed ? (
         <div
           onPointerDown={startDrag}
@@ -431,14 +765,16 @@ export default function JobListingDetail() {
         <div className="h-6 shrink-0" />
       )}
 
-      {/* BOTTOM SECTION: grows as the handle is dragged up */}
+      {/* BOTTOM SECTION */}
       <div className="w-full min-h-0 border border-[#E3E0D8] rounded-xl p-5 shadow-sm flex flex-col flex-1 overflow-auto">
+
         {/* Header Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 pb-3 border-b border-[#E3E0D8] shrink-0">
           <div>
-            <h2 className="font-serif text-xl text-[#1C2321] font-bold">
+            <h2 className="archivo text-xl text-[#1C2321] font-bold">
               Job Applications
             </h2>
+
             <p className="archivo text-xs text-[#6B6F76]">
               Showing recent applicants
             </p>
@@ -448,33 +784,63 @@ export default function JobListingDetail() {
             <span className="archivo text-xs text-[#6B6F76]">
               Show per page:
             </span>
+
             <select
               value={itemsPerPage}
               onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
+                setItemsPerPage(
+                  Number(e.target.value)
+                );
+
                 setCurrentPage(1);
               }}
               className="border border-[#D8D5CD] bg-white text-xs text-[#1C2321] rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-[#991B1B]"
             >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
+              <option value={5}>
+                5
+              </option>
+
+              <option value={10}>
+                10
+              </option>
             </select>
           </div>
         </div>
 
-        {/* Scrollable Table Content (no max height so it grows with the panel) */}
+        {/* Search, filters and sorting */}
+        <ApplicationFilters
+          {...appFilters.filterProps}
+        />
+
+        {/* Table */}
         <div className="flex-1 min-h-[320px] overflow-y-auto border border-[#E3E0D8] rounded-lg">
           <table className="w-full text-left text-sm border-collapse">
             <thead className="sticky top-0 bg-[#FAF9F6] z-10 border-b border-[#E3E0D8]">
               <tr className="archivo text-[11px] text-[#6B6F76] uppercase tracking-wider font-semibold">
-                <th className="p-3">Applicant Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Application Date</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 text-right">Action</th>
+                <th className="p-3">
+                  Applicant Name
+                </th>
+
+                <th className="p-3">
+                  Email
+                </th>
+
+                <th className="p-3">
+                  Application Date
+                </th>
+
+                <th className="p-3">
+                  Status
+                </th>
+
+                <th className="p-3 text-right">
+                  Action
+                </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-[#E3E0D8] bg-white">
+
               {appsLoading ? (
                 <tr>
                   <td
@@ -493,88 +859,140 @@ export default function JobListingDetail() {
                     {appsError}
                   </td>
                 </tr>
-              ) : currentApplicants.length === 0 ? (
+              ) : currentApplicants.length ===
+                0 ? (
                 <tr>
                   <td
                     colSpan={5}
                     className="p-6 text-center text-xs text-[#6B6F76]"
                   >
-                    No applications yet.
+                    {applications.length >
+                    0
+                      ? "No applications match your filters."
+                      : "No applications yet."}
                   </td>
                 </tr>
               ) : (
-                currentApplicants.map((app) => (
-                  <tr
-                    key={app.application_id}
-                    className="hover:bg-[#FAF9F6] transition-colors"
-                  >
-                    <td className="p-3 font-medium text-[#1C2321]">
-                      {[app.first_name, app.last_name]
-                        .filter(Boolean)
-                        .join(" ") || "Unknown applicant"}
-                    </td>
-                    <td className="p-3 text-[#6B6F76] text-xs">
-                      {app.email ?? "—"}
-                    </td>
-                    <td className="p-3 text-[#6B6F76] text-xs">
-                      {app.date_applied ?? "—"}
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`archivo text-[11px] px-2.5 py-1 rounded-full font-medium border ${statusStyle(app.status)}`}
-                      >
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <button
-                        className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors"
-                        onClick={() =>
-                          navigate(
-                            `/employee/dash/job_listing/application?job_id=${job_id}&applicant_id=${app.applicant_id}`,
-                          )
-                        }
-                      >
-                        View Application
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                currentApplicants.map(
+                  (app) => (
+                    <tr
+                      key={
+                        app.application_id
+                      }
+                      className="hover:bg-[#FAF9F6] transition-colors"
+                    >
+                      <td className="p-3 font-medium text-[#1C2321]">
+                        {[
+                          app.first_name,
+                          app.last_name,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") ||
+                          "Unknown applicant"}
+                      </td>
+
+                      <td className="p-3 text-[#6B6F76] text-xs">
+                        {app.email ?? "—"}
+                      </td>
+
+                      <td className="p-3 text-[#6B6F76] text-xs">
+                        {app.date_applied ??
+                          "—"}
+                      </td>
+
+                      <td className="p-3">
+                        <span
+                          className={`archivo text-[11px] px-2.5 py-1 rounded-full font-medium border ${statusStyle(
+                            app.status
+                          )}`}
+                        >
+                          {app.status}
+                        </span>
+                      </td>
+
+                      <td className="p-3 text-right">
+                        <button
+                          className="archivo text-xs text-[#991B1B] hover:text-[#7F1D1D] hover:underline font-semibold transition-colors"
+                          onClick={() =>
+                            navigate(
+                              `/employee/dash/job_listing/application?job_id=${job_id}&applicant_id=${app.applicant_id}`
+                            )
+                          }
+                        >
+                          View Application
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )
               )}
+
             </tbody>
           </table>
         </div>
 
         {/* Pagination Footer */}
         <div className="flex items-center justify-between pt-3 mt-2 text-xs archivo text-[#6B6F76] shrink-0">
+
           <span>
             {totalItems === 0
               ? "No applicants"
-              : `Showing ${startIndex + 1} to ${Math.min(startIndex + itemsPerPage, totalItems)} of ${totalItems} applicants`}
+              : `Showing ${
+                  startIndex + 1
+                } to ${Math.min(
+                  startIndex +
+                    itemsPerPage,
+                  totalItems
+                )} of ${totalItems} applicants`}
           </span>
 
           <div className="flex items-center gap-2">
+
             <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
+              onClick={() =>
+                setCurrentPage(
+                  (prev) =>
+                    Math.max(
+                      prev - 1,
+                      1
+                    )
+                )
+              }
+              disabled={
+                currentPage === 1
+              }
               className="px-3 py-1.5 border border-[#D8D5CD] rounded bg-white hover:bg-[#FAF9F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-[#1C2321]"
             >
               Previous
             </button>
+
             <span className="px-2 font-medium text-[#1C2321]">
-              {currentPage} of {totalPages}
+              {currentPage} of{" "}
+              {totalPages}
             </span>
+
             <button
               onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                setCurrentPage(
+                  (prev) =>
+                    Math.min(
+                      prev + 1,
+                      totalPages
+                    )
+                )
               }
-              disabled={currentPage === totalPages}
+              disabled={
+                currentPage ===
+                totalPages
+              }
               className="px-3 py-1.5 border border-[#D8D5CD] rounded bg-white hover:bg-[#FAF9F6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-[#1C2321]"
             >
               Next
             </button>
+
           </div>
         </div>
+
       </div>
     </div>
   );

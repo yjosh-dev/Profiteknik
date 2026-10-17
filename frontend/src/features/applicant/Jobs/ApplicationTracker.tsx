@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
   FaBuilding,
@@ -9,6 +9,8 @@ import {
 } from "react-icons/fa";
 import { FaCheck, FaXmark, FaEllipsis } from "react-icons/fa6";
 
+import { applicantsMyJobService } from "../../../service/api/applicants/applicantsMyJobsService";
+
 /* ---------------- Types ---------------- */
 
 type StepStatus = "completed" | "current" | "upcoming" | "rejected";
@@ -17,117 +19,202 @@ type Step = {
   key: string;
   label: string;
   description: string;
-  date?: string; // ISO or readable string
+  date?: string;
   status: StepStatus;
 };
 
-type ApplicationTrackerData = {
+type ApplicationTrackerResponse = {
   application_id: number;
+  applied_at: string;
+  current_status: string;
+
   job: {
     id: number;
     title: string;
     company: string;
     location: string;
     employment_type: string;
-    salary_range: string;
-    logo_url?: string;
+    minimum_salary: number | null;
+    maximum_salary: number | null;
   };
-  applied_at: string;
-  current_status: string; // e.g. "Interview"
-  steps: Step[];
-  recruiter?: {
-    name: string;
-    role: string;
-    email: string;
-    avatar_url?: string;
-  };
-  notes?: string;
-};
 
-/* ---------------- Mock Data ---------------- */
-
-const MOCK_APPLICATION: ApplicationTrackerData = {
-  application_id: 1042,
-  job: {
-    id: 88,
-    title: "Underwater Welder",
-    company: "Profikenik Corp.",
-    location: "Manila, Philippines (Hybrid)",
-    employment_type: "Full-time",
-    salary_range: "₱60,000 – ₱90,000 / month",
-  },
-  applied_at: "2025-05-09T10:30:00Z",
-  current_status: "Interview",
-  steps: [
-    {
-      key: "applied",
-      label: "Applied",
-      description: "Your application was received by the employer.",
-      date: "2025-05-09",
-      status: "completed",
-    },
-    {
-      key: "review",
-      label: "Under review",
-      description: "The hiring team is reviewing your resume and portfolio.",
-      date: "2025-05-10",
-      status: "completed",
-    },
-    {
-      key: "shortlisted",
-      label: "Shortlisted",
-      description: "You were shortlisted from the initial applicant pool.",
-      date: "2025-05-12",
-      status: "completed",
-    },
-    {
-      key: "interview",
-      label: "Interview",
-      description: "Technical interview with the engineering team.",
-      date: "2025-05-18",
-      status: "current",
-    },
-    {
-      key: "offer",
-      label: "Offer",
-      description: "Awaiting final decision from the employer.",
-      status: "upcoming",
-    },
-    {
-      key: "hired",
-      label: "Hired",
-      description: "Congratulations, you're hired!",
-      status: "upcoming",
-    },
-  ],
-  recruiter: {
-    name: "Sarah Chen",
-    role: "Senior Recruiter",
-    email: "sarah.chen@xureapp.com",
-  },
-  notes:
-    "Bring your portfolio. The interview will focus on React performance and component architecture.",
+  interview: {
+    id: number;
+    title: string;
+    applicant_email: string;
+    starts_at: string;
+    ends_at: string;
+    meet_link: string | null;
+  } | null;
 };
 
 /* ---------------- Helpers ---------------- */
 
+function formatInterviewTime(startsAt: string, endsAt: string) {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return `${formatDateTime(startsAt)} - ${formatDateTime(endsAt)}`;
+  }
+
+  const date = start.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  const startTime = start.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  const endTime = end.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return `${date} · ${startTime} - ${endTime}`;
+}
+
 function formatDate(input?: string) {
   if (!input) return "";
+
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return input;
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+
+  if (Number.isNaN(d.getTime())) {
+    return input;
+  }
+
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatDateTime(input?: string) {
   if (!input) return "";
+
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return input;
+
+  if (Number.isNaN(d.getTime())) {
+    return input;
+  }
+
   return d.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+  });
+}
+
+function formatSalary(
+  minimumSalary: number | null,
+  maximumSalary: number | null,
+) {
+  if (minimumSalary !== null && maximumSalary !== null) {
+    return `₱${minimumSalary.toLocaleString()} – ₱${maximumSalary.toLocaleString()}`;
+  }
+
+  if (minimumSalary !== null) {
+    return `₱${minimumSalary.toLocaleString()}+`;
+  }
+
+  if (maximumSalary !== null) {
+    return `Up to ₱${maximumSalary.toLocaleString()}`;
+  }
+
+  return "Salary not specified";
+}
+
+function buildSteps(currentStatus: string, appliedAt: string): Step[] {
+  const status = currentStatus.toLowerCase();
+
+  const steps: Step[] = [
+    {
+      key: "applied",
+      label: "Applied",
+      description: "Your application was received by the employer.",
+      date: appliedAt,
+      status: "completed",
+    },
+    {
+      key: "review",
+      label: "Under Review",
+      description: "The hiring team is reviewing your application.",
+      status: "upcoming",
+    },
+    {
+      key: "shortlisted",
+      label: "Shortlisted",
+      description: "You were shortlisted from the initial applicant pool.",
+      status: "upcoming",
+    },
+    {
+      key: "interview",
+      label: "Interview",
+      description: "Your application has reached the interview stage.",
+      status: "upcoming",
+    },
+    {
+      key: "completed",
+      label: "Completed",
+      description: "The application process has been completed.",
+      status: "upcoming",
+    },
+  ];
+
+  if (status === "rejected") {
+    return [
+      steps[0],
+      {
+        key: "review",
+        label: "Under Review",
+        description: "The hiring team reviewed your application.",
+        status: "completed",
+      },
+      {
+        key: "rejected",
+        label: "Rejected",
+        description: "Your application was not selected to proceed further.",
+        status: "rejected",
+      },
+    ];
+  }
+
+  const statusPosition: Record<string, number> = {
+    pending: 1,
+    shortlisted: 2,
+    interview: 3,
+    completed: 4,
+  };
+
+  const currentPosition = statusPosition[status] ?? 0;
+
+  return steps.map((step, index) => {
+    const position = index;
+
+    if (position < currentPosition) {
+      return {
+        ...step,
+        status: "completed",
+      };
+    }
+
+    if (position === currentPosition) {
+      return {
+        ...step,
+        status: "current",
+      };
+    }
+
+    return {
+      ...step,
+      status: "upcoming",
+    };
   });
 }
 
@@ -181,20 +268,21 @@ function Stepper({ steps }: { steps: Step[] }) {
               className="min-w-0 flex-1"
               aria-current={step.status === "current" ? "step" : undefined}
             >
-              {/* dot + connector */}
               <div className="flex items-center">
                 <StepDot status={step.status} />
+
                 {!isLast && (
                   <div
                     aria-hidden="true"
                     className={`mx-2 h-0 flex-1 border-t-2 ${
-                      solid ? "border-emerald-600" : "border-dashed border-zinc-200"
+                      solid
+                        ? "border-emerald-600"
+                        : "border-dashed border-zinc-200"
                     }`}
                   />
                 )}
               </div>
 
-              {/* label + date */}
               <div className="mt-2 pr-3">
                 <p
                   className={`archivo text-xs font-semibold ${
@@ -203,6 +291,7 @@ function Stepper({ steps }: { steps: Step[] }) {
                 >
                   {step.label}
                 </p>
+
                 <p className="archivo mt-0.5 min-h-[1rem] text-xs text-zinc-500">
                   {step.date ? formatDate(step.date) : ""}
                 </p>
@@ -215,12 +304,19 @@ function Stepper({ steps }: { steps: Step[] }) {
   );
 }
 
-function MetaItem({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function MetaItem({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <span className="archivo inline-flex items-center gap-1.5 text-sm text-zinc-600">
       <span className="text-zinc-400" aria-hidden="true">
         {icon}
       </span>
+
       {children}
     </span>
   );
@@ -239,8 +335,10 @@ function InfoCard({
     <section className="rounded-xl border border-zinc-200 bg-white p-5">
       <div className="flex items-center justify-between gap-3">
         <h3 className="archivo text-xs font-semibold text-zinc-500">{title}</h3>
+
         {action}
       </div>
+
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -248,56 +346,179 @@ function InfoCard({
 
 /* ---------------- Main Component ---------------- */
 
-export default function ApplicationTracker({
-  data = MOCK_APPLICATION,
-  onMessageRecruiter,
-  onWithdraw,
-}: {
-  data?: ApplicationTrackerData;
-  onMessageRecruiter?: () => void;
-  onWithdraw?: () => void;
-}) {
+export default function ApplicationTracker() {
   const navigate = useNavigate();
-  const [showNotes, setShowNotes] = useState(true);
+  const { applicationId } = useParams<{
+    applicationId: string;
+  }>();
+
+  const [data, setData] = useState<ApplicationTrackerResponse | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [menuOpen, setMenuOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * Fetch application tracking information
+   */
+  useEffect(() => {
+    const fetchTracking = async () => {
+      if (!applicationId) {
+        setError("Application ID is missing.");
+        setLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError("You are not authenticated.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await applicantsMyJobService.fetchApplicationTracking(
+          Number(applicationId),
+          token,
+        );
+
+        setData(response.data);
+      } catch (err) {
+        console.error("Failed to load application tracking:", err);
+
+        setError("Unable to load the application details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTracking();
+  }, [applicationId]);
+
+  /*
+   * Close menu when clicking outside or pressing Escape
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onClick);
+
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  /*
+   * Generate timeline from current database status
+   */
+  const steps = useMemo(() => {
+    if (!data) return [];
+
+    return buildSteps(data.current_status, data.applied_at);
+  }, [data]);
+
   const currentStep = useMemo(
-    () => data.steps.find((s) => s.status === "current"),
-    [data.steps],
+    () => steps.find((step) => step.status === "current"),
+    [steps],
   );
 
+  /*
+   * Loading state
+   */
+  if (loading) {
+    return (
+      <div className="flex w-full justify-center px-4 py-8">
+        <div className="flex w-full max-w-5xl items-center justify-center rounded-xl border border-zinc-200 bg-white py-20">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
+
+            <p className="archivo text-sm text-zinc-500">
+              Loading application...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * Error state
+   */
+  if (error || !data) {
+    return (
+      <div className="flex w-full justify-center px-4 py-8">
+        <div className="w-full max-w-5xl rounded-xl border border-zinc-200 bg-white p-6">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className={`archivo inline-flex cursor-pointer items-center gap-2 rounded text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 ${focusRing}`}
+          >
+            <FaArrowLeft size={12} />
+            Back to applications
+          </button>
+
+          <div className="mt-12 text-center">
+            <p className="archivo text-sm font-semibold text-zinc-900">
+              Unable to load application
+            </p>
+
+            <p className="archivo mt-1 text-sm text-zinc-500">
+              {error || "The application could not be found."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const status = data.current_status.toLowerCase();
+
   const isRejected = status === "rejected";
   const isCompleted = status === "completed";
 
   const statusPill = isRejected
-    ? { label: "Rejected", cls: "bg-red-50 text-red-700 ring-red-100" }
+    ? {
+        label: "Rejected",
+        cls: "bg-red-50 text-red-700 ring-red-100",
+      }
     : isCompleted
-      ? { label: "Completed", cls: "bg-emerald-50 text-emerald-800 ring-emerald-100" }
-      : { label: data.current_status, cls: "bg-emerald-50 text-emerald-800 ring-emerald-100" };
-
-  /* close the menu on outside click / Escape */
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
+      ? {
+          label: "Completed",
+          cls: "bg-emerald-50 text-emerald-800 ring-emerald-100",
+        }
+      : {
+          label: data.current_status,
+          cls: "bg-emerald-50 text-emerald-800 ring-emerald-100",
+        };
 
   return (
     <div className="flex w-full justify-center px-4 py-8">
       <div className="flex w-full max-w-5xl flex-col gap-5">
         {/* Back link */}
+
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -308,15 +529,20 @@ export default function ApplicationTracker({
         </button>
 
         {/* Main card */}
+
         <div className="rounded-xl border border-zinc-200 bg-white p-6">
           {/* Title row */}
+
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="archivo truncate text-2xl font-semibold text-zinc-900">
                 {data.job.title}
               </h1>
+
               <p className="archivo mt-1 text-xs text-zinc-500">
-                Applied {formatDateTime(data.applied_at)} · Application #{data.application_id}
+                Applied {formatDateTime(data.applied_at)}
+                {" · "}
+                Application #{data.application_id}
               </p>
             </div>
 
@@ -328,28 +554,34 @@ export default function ApplicationTracker({
           </div>
 
           {/* Meta */}
+
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-            <MetaItem icon={<FaBuilding size={12} />}>{data.job.company}</MetaItem>
-            <MetaItem icon={<FaMapMarkerAlt size={12} />}>{data.job.location}</MetaItem>
-            <MetaItem icon={<FaBriefcase size={12} />}>{data.job.employment_type}</MetaItem>
-            <MetaItem icon={<FaMoneyBillWave size={12} />}>{data.job.salary_range}</MetaItem>
+            <MetaItem icon={<FaBuilding size={12} />}>
+              {data.job.company}
+            </MetaItem>
+
+            <MetaItem icon={<FaMapMarkerAlt size={12} />}>
+              {data.job.location}
+            </MetaItem>
+
+            <MetaItem icon={<FaBriefcase size={12} />}>
+              {data.job.employment_type}
+            </MetaItem>
+
+            <MetaItem icon={<FaMoneyBillWave size={12} />}>
+              {formatSalary(data.job.minimum_salary, data.job.maximum_salary)}
+            </MetaItem>
           </div>
 
           {/* Stepper */}
+
           <div className="mt-8">
-            <Stepper steps={data.steps} />
+            <Stepper steps={steps} />
           </div>
 
           {/* Actions */}
-          <div className="mt-8 flex items-center gap-2 border-t border-zinc-100 pt-5">
-            <button
-              type="button"
-              onClick={onMessageRecruiter}
-              className={`archivo h-10 cursor-pointer rounded-lg border border-emerald-900 bg-white px-4 text-sm font-semibold text-emerald-900 transition-colors hover:bg-emerald-50 ${focusRing}`}
-            >
-              Message recruiter
-            </button>
 
+          <div className="mt-8 flex items-center gap-2 border-t border-zinc-100 pt-5">
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -372,7 +604,6 @@ export default function ApplicationTracker({
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
-                      onWithdraw?.();
                     }}
                     className="archivo w-full cursor-pointer px-3 py-2 text-left text-sm text-red-700 transition-colors hover:bg-red-50 focus:bg-red-50 focus:outline-none"
                   >
@@ -385,66 +616,98 @@ export default function ApplicationTracker({
         </div>
 
         {/* Details */}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-          {currentStep && (
+          {data.interview ? (
             <InfoCard title="What's next">
-              <p className="archivo text-sm font-semibold text-zinc-900">{currentStep.label}</p>
+              <p className="archivo text-sm font-semibold text-zinc-900">
+                Interview
+              </p>
+
+              <p className="archivo mt-1 text-sm leading-relaxed text-zinc-600">
+                {data.interview.title || "Your interview has been scheduled."}
+              </p>
+
+              <div className="mt-4 space-y-2">
+                <div>
+                  <p className="archivo text-xs font-semibold text-zinc-500">
+                    Date and time
+                  </p>
+
+                  <p className="archivo mt-1 text-sm font-semibold text-zinc-900">
+                    {formatInterviewTime(
+                      data.interview.starts_at,
+                      data.interview.ends_at,
+                    )}
+                  </p>
+                </div>
+
+                {data.interview.meet_link && (
+                  <a
+                    href={data.interview.meet_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`archivo mt-3 inline-flex items-center rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 ${focusRing}`}
+                  >
+                    Join Google Meet
+                  </a>
+                )}
+              </div>
+            </InfoCard>
+          ) : currentStep ? (
+            <InfoCard title="What's next">
+              <p className="archivo text-sm font-semibold text-zinc-900">
+                {currentStep.label}
+              </p>
+
               <p className="archivo mt-1 text-sm leading-relaxed text-zinc-600">
                 {currentStep.description}
               </p>
+
               {currentStep.date && (
                 <p className="archivo mt-3 inline-block rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">
                   {formatDate(currentStep.date)}
                 </p>
               )}
             </InfoCard>
-          )}
+          ) : null}
 
-          {data.recruiter && (
-            <InfoCard title="Recruiter">
-              <div className="flex items-center gap-3">
-                <div className="archivo flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-zinc-700">
-                  {data.recruiter.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")}
-                </div>
-                <div className="min-w-0">
-                  <p className="archivo truncate text-sm font-semibold text-zinc-900">
-                    {data.recruiter.name}
-                  </p>
-                  <p className="archivo truncate text-xs text-zinc-500">{data.recruiter.role}</p>
-                </div>
-              </div>
-              <a
-                href={`mailto:${data.recruiter.email}`}
-                className={`archivo mt-3 block truncate rounded text-sm text-emerald-800 underline-offset-2 hover:underline ${focusRing}`}
-              >
-                {data.recruiter.email}
-              </a>
+          <InfoCard title="Application">
+            <p className="archivo text-sm text-zinc-600">
+              Application #
+              <span className="font-semibold text-zinc-900">
+                {data.application_id}
+              </span>
+            </p>
+
+            <p className="archivo mt-2 text-sm text-zinc-600">
+              Submitted{" "}
+              <span className="font-semibold text-zinc-900">
+                {formatDate(data.applied_at)}
+              </span>
+            </p>
+
+            <p className="archivo mt-2 text-sm text-zinc-600">
+              Current status{" "}
+              <span className="font-semibold capitalize text-zinc-900">
+                {data.current_status}
+              </span>
+            </p>
+          </InfoCard>
+
+          {isRejected && (
+            <InfoCard title="Application status">
+              <p className="archivo text-sm leading-relaxed text-zinc-600">
+                Your application was not selected to proceed further.
+              </p>
             </InfoCard>
           )}
 
-          {data.notes && (
-            <InfoCard
-              title="Notes"
-              action={
-                <button
-                  type="button"
-                  onClick={() => setShowNotes((v) => !v)}
-                  aria-expanded={showNotes}
-                  className={`archivo cursor-pointer rounded text-xs font-semibold text-emerald-800 underline-offset-2 hover:underline ${focusRing}`}
-                >
-                  {showNotes ? "Hide" : "Show"}
-                </button>
-              }
-            >
-              {showNotes ? (
-                <p className="archivo text-sm leading-relaxed text-zinc-600">{data.notes}</p>
-              ) : (
-                <p className="archivo text-sm text-zinc-400">Notes hidden.</p>
-              )}
+          {isCompleted && (
+            <InfoCard title="Application status">
+              <p className="archivo text-sm leading-relaxed text-zinc-600">
+                The application process has been completed.
+              </p>
             </InfoCard>
           )}
         </div>

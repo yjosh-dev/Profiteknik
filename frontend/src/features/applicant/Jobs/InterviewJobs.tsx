@@ -153,7 +153,9 @@ export default function InterviewJobs() {
             key={job.id}
             jobTitle={job.job_title}
             appliedAt={job.applied_at}
-            onView={() => navigate("/applicant/my_jobs/track_application")}
+            onView={() =>
+            navigate(`/applicant/my_jobs/track_application/${job.id}`)
+            }
             onWithdraw={() => alert()}
           />
         ))}

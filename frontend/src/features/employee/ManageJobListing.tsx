@@ -48,7 +48,7 @@ export default function ManageJobListing() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const navigate = useNavigate();
 
-  // Function to fetch data from your Laravel endpoint
+  // note use api service call
   const fetchJobListings = async (page: number, searchKeyword: string) => {
     setLoading(true);
     try {
