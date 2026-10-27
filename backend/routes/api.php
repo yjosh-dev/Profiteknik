@@ -20,6 +20,7 @@ use App\Http\Controllers\Users\ApplicantNotificationController;
 use App\Http\Controllers\Users\ApplicationTrackingController;
 use App\Http\Controllers\Users\ApplicantConversationController;
 
+use App\Http\Controllers\Employee\UpdateJobListingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,8 @@ Route::prefix('/employee')->group(function () {
     });
     Route::get('/jobs/{job}/applications', [JobApplicationsController::class, 'index']);
     Route::apiResource('job_listings', JobListingController::class);
+
+Route::put('/employee/job_listings/{job_id}', UpdateJobListingController::class);
 
     Route::get('/screen-applicant', [ScreenApplicantController::class, 'show'])->middleware('auth:sanctum');
     Route::patch('/screen-applicant/{applicationId}/status', [ScreenApplicantController::class, 'updateStatus'])->middleware('auth:sanctum');

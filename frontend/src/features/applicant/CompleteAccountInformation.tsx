@@ -8,6 +8,11 @@ import contactBanner from "../../assets/img/applicant_contact.jpg";
 import StatusModal from "../../components/ui/StatusModal";
 import { AuthContext } from "../../context/AuthProvider";
 import { applicantProfileService } from "../../service/api/applicants/applicantProfileService";
+// Adjust this path to wherever you saved the data file
+import {
+  PH_REGION_NAMES,
+  getCitiesByRegion,
+} from "../../utils/PhilippineLocations";
 
 export type ProfileForm = {
   first_name: string;
@@ -49,6 +54,9 @@ const REQUIRED: (keyof ProfileForm)[] = [
   "country",
 ];
 
+// Must match the backend enum: ['Jr', 'Sr', '3rd', 'None']
+const SUFFIX_OPTIONS = ["Jr", "Sr", "3rd", "None"];
+
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
 
@@ -56,6 +64,9 @@ const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
 const NEXT_STEP_PATH = "/applicant/profile";
 
 const FALLBACK_ERROR = "Something went wrong. Please try again.";
+
+const INPUT_CLASS =
+  "archivo w-full h-9 rounded-md border border-gray-300 px-2.5 text-sm text-zinc-800 placeholder-zinc-400 outline-none transition-all focus:border-red-700 focus:ring-1 focus:ring-red-700/40";
 
 // Pulls the first Laravel validation message, or the general message
 function getErrorMessage(err: unknown): string {
@@ -71,12 +82,32 @@ function getErrorMessage(err: unknown): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 mt-4 mb-2">
+    <div className="flex items-center gap-2 mt-4 mb-2 first:mt-0">
       <p className="archivo text-xs font-semibold uppercase tracking-wide text-zinc-800">
         {children}
       </p>
       <span className="h-px flex-1 bg-gray-200" />
     </div>
+  );
+}
+
+function Label({
+  name,
+  label,
+  required,
+}: {
+  name: string;
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <label
+      htmlFor={name}
+      className="archivo block text-xs font-medium text-zinc-700 mb-1"
+    >
+      {label}
+      {required && <span className="text-red-700"> *</span>}
+    </label>
   );
 }
 
@@ -92,20 +123,16 @@ function Field({
   label: string;
   name: keyof ProfileForm;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => void;
   required?: boolean;
   placeholder?: string;
   className?: string;
 }) {
   return (
     <div className={className}>
-      <label
-        htmlFor={name}
-        className="archivo block text-xs font-medium text-zinc-700 mb-1"
-      >
-        {label}
-        {required && <span className="text-red-700"> *</span>}
-      </label>
+      <Label name={name} label={label} required={required} />
       <input
         id={name}
         name={name}
@@ -113,8 +140,57 @@ function Field({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="archivo w-full h-9 rounded-md border border-gray-300 px-2.5 text-sm text-zinc-800 placeholder-zinc-400 outline-none transition-all focus:border-red-700 focus:ring-1 focus:ring-red-700/40"
+        className={INPUT_CLASS}
       />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  placeholder,
+  required = false,
+  disabled = false,
+  className = "",
+}: {
+  label: string;
+  name: keyof ProfileForm;
+  value: string;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => void;
+  options: string[];
+  placeholder: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <Label name={name} label={label} required={required} />
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`${INPUT_CLASS} bg-white cursor-pointer disabled:bg-gray-100 disabled:text-zinc-400 disabled:cursor-not-allowed ${
+          value === "" ? "text-zinc-400" : ""
+        }`}
+      >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="text-zinc-800">
+            {opt}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -132,6 +208,9 @@ export default function CompleteAccountInformation() {
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Cities for the chosen region (already sorted A-Z)
+  const cityOptions = getCitiesByRegion(form.region);
+
   // Build a preview URL for the chosen file and free it when it changes
   useEffect(() => {
     if (!profileImage) {
@@ -143,9 +222,16 @@ export default function CompleteAccountInformation() {
     return () => URL.revokeObjectURL(url);
   }, [profileImage]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+      // A city from the old region is no longer valid
+      ...(name === "region" ? { city: "" } : {}),
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,20 +287,21 @@ export default function CompleteAccountInformation() {
 
     // Refresh the logged-in user (isNew, profile picture), then move on
     await auth?.checkAuth("applicant");
-    navigate('/applicant/profile');
+    navigate(NEXT_STEP_PATH);
   };
 
   return (
-    <div className="w-full min-h-full flex justify-center bg-white px-4 py-6">
-      <div className="w-full max-w-[360px]">
-        <div className="w-full rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
+    <div className="w-full min-h-full flex justify-center items-center bg-white px-4 py-6">
+      <div className="w-full max-w-4xl rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm md:flex">
+        {/* Left panel: banner, intro, photo */}
+        <aside className="md:w-72 md:shrink-0 md:border-r md:border-gray-200 flex flex-col">
           <img
             src={contactBanner}
             alt=""
-            className="w-full h-24 object-cover object-center"
+            className="w-full h-24 md:h-36 object-cover object-center"
           />
 
-          <form onSubmit={handleSubmit} className="px-4 py-4">
+          <div className="px-4 py-4">
             <h2 className="archivo text-base font-bold text-zinc-900 leading-snug">
               Add your details to continue
             </h2>
@@ -281,95 +368,108 @@ export default function CompleteAccountInformation() {
                 className="hidden"
               />
             </div>
+          </div>
+        </aside>
 
-            {/* Name */}
-            <SectionLabel>Name</SectionLabel>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-              <Field
-                label="First name"
-                name="first_name"
-                value={form.first_name}
-                onChange={handleChange}
-                required
-              />
-              <Field
-                label="Middle name"
-                name="middle_name"
-                value={form.middle_name}
-                onChange={handleChange}
-              />
-              <Field
-                label="Last name"
-                name="last_name"
-                value={form.last_name}
-                onChange={handleChange}
-                required
-              />
-              <Field
-                label="Suffix"
-                name="suffix"
-                value={form.suffix}
-                onChange={handleChange}
-                placeholder="Jr., Sr."
-              />
-            </div>
+        {/* Right panel: form */}
+        <form onSubmit={handleSubmit} className="flex-1 px-4 py-4 md:px-6">
+          {/* Name */}
+          <SectionLabel>Name</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-2">
+            <Field
+              label="First name"
+              name="first_name"
+              value={form.first_name}
+              onChange={handleChange}
+              required
+            />
+            <Field
+              label="Middle name"
+              name="middle_name"
+              value={form.middle_name}
+              onChange={handleChange}
+            />
+            <Field
+              label="Last name"
+              name="last_name"
+              value={form.last_name}
+              onChange={handleChange}
+              required
+            />
+            <SelectField
+              label="Suffix"
+              name="suffix"
+              value={form.suffix}
+              onChange={handleChange}
+              options={SUFFIX_OPTIONS}
+              placeholder="Select"
+            />
+          </div>
 
-            {/* Address */}
-            <SectionLabel>Address</SectionLabel>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-              <Field
-                label="Building no."
-                name="building_no"
-                value={form.building_no}
-                onChange={handleChange}
-              />
-              <Field
-                label="House no."
-                name="house_no"
-                value={form.house_no}
-                onChange={handleChange}
-              />
-              <Field
-                label="Street"
-                name="street"
-                value={form.street}
-                onChange={handleChange}
-                required
-                className="col-span-2"
-              />
-              <Field
-                label="City"
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                required
-              />
-              <Field
-                label="Region"
-                name="region"
-                value={form.region}
-                onChange={handleChange}
-                required
-              />
-              <Field
-                label="Country"
-                name="country"
-                value={form.country}
-                onChange={handleChange}
-                required
-                className="col-span-2"
-              />
-            </div>
+          {/* Address */}
+          <SectionLabel>Address</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-2">
+            <Field
+              label="Building no."
+              name="building_no"
+              value={form.building_no}
+              onChange={handleChange}
+            />
+            <Field
+              label="House no."
+              name="house_no"
+              value={form.house_no}
+              onChange={handleChange}
+            />
+            <Field
+              label="Street"
+              name="street"
+              value={form.street}
+              onChange={handleChange}
+              required
+              className="col-span-2"
+            />
+            <SelectField
+              label="Region"
+              name="region"
+              value={form.region}
+              onChange={handleChange}
+              options={PH_REGION_NAMES}
+              placeholder="Select region"
+              required
+              className="col-span-2"
+            />
+            <SelectField
+              label="City"
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              options={cityOptions}
+              placeholder={form.region ? "Select city" : "Select region first"}
+              required
+              disabled={!form.region}
+              className="col-span-2"
+            />
+            <Field
+              label="Country"
+              name="country"
+              value={form.country}
+              onChange={handleChange}
+              required
+              className="col-span-2"
+            />
+          </div>
 
+          <div className="mt-5 flex md:justify-end">
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="archivo mt-5 w-full h-9 rounded-md bg-red-700 text-white text-sm font-semibold transition-colors hover:bg-red-800 cursor-pointer disabled:bg-red-300 disabled:cursor-not-allowed"
+              className="archivo w-full md:w-40 h-9 rounded-md bg-red-700 text-white text-sm font-semibold transition-colors hover:bg-red-800 cursor-pointer disabled:bg-red-300 disabled:cursor-not-allowed"
             >
               {submitting ? "Saving..." : "Continue"}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
 
       {/* Result modal */}

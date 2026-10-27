@@ -23,6 +23,21 @@ export interface FormDataState {
   screening_questions: ScreeningQuestionData[];
 }
 
+export interface UpdateJobListingPayload {
+  job_title: string;
+  job_description: string;
+  employment_type: string;
+  vacant_position: number | "";
+  minimum_salary: number | "";
+  maximum_salary: number | "";
+  posted_at: string;
+  posted_until: string;
+  requirements: {
+    highest_education: string;
+    experience: number | null;
+  };
+}
+
 export const jobListingApi = {
   storeJobListing: async (formData: FormDataState, token: string) => {
     return await axiosClient.post("/employee/job_listings", formData, {
@@ -35,9 +50,7 @@ export const jobListingApi = {
 
   getJobListing: async (job_id: number | string) => {
     return await axiosClient.get(`/employee/job_listings/${job_id}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
   },
 
@@ -45,5 +58,16 @@ export const jobListingApi = {
     return await axiosClient.get("/employee/job_listings", {
       params: { page, search },
     });
+  },
+
+  updateJobListing: async (
+    job_id: number | string,
+    payload: UpdateJobListingPayload
+  ) => {
+    return await axiosClient.put(
+      `/employee/job_listings/${job_id}`,
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
   },
 };

@@ -5,6 +5,12 @@ import StatusModal from "../../components/ui/StatusModal";
 
 import { jobListingApi } from "../../service/api/employee/jobListingService";
 import { SKILLS_DATABASE, type Skill } from "../../utils/Skills";
+import {
+  JOB_PRESETS,
+  JOB_PRESET_QUESTIONS,
+  getLocalDateString,
+  type JobPreset,
+} from "../../utils/JobPreset";
 
 import {
   FaCheck,
@@ -14,6 +20,8 @@ import {
   FaCheckCircle,
   FaSearch,
   FaTimes,
+  FaChevronDown,
+  FaChevronUp,
 } from "react-icons/fa";
 
 const TOTAL_STEPS = 5;
@@ -34,6 +42,7 @@ interface FormDataState {
   };
   screening_questions: Array<{ screening_question: string }>;
 }
+
 
 export default function JobListing() {
   // note use context later for listed by
@@ -64,6 +73,28 @@ export default function JobListing() {
 
   const [steps, setSteps] = useState(1);
 
+  const resetJobForm = () => {
+    setFormData({
+      job_title: "",
+      job_description: "",
+      minimum_salary: "",
+      maximum_salary: "",
+      vacant_position: 1,
+      employment_type: "",
+      posted_at: "",
+      posted_until: "",
+      listed_by: 10,
+      requirements: {
+        highest_education: "",
+        experience: 0,
+      },
+      screening_questions: [{ screening_question: "" }],
+    });
+
+    setSelectedSkillIds([]);
+    setSteps(1);
+  };
+
   // Input handlers
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -91,13 +122,13 @@ export default function JobListing() {
   };
 
   const handleQuestionChange = (index: number, value: string) => {
-    const updatedQuestions = [...formData.screening_questions];
-
-    updatedQuestions[index].screening_question = value;
-
     setFormData((prev) => ({
       ...prev,
-      screening_questions: updatedQuestions,
+      screening_questions: prev.screening_questions.map((question, i) =>
+        i === index
+          ? { ...question, screening_question: value }
+          : question,
+      ),
     }));
   };
 
@@ -128,6 +159,37 @@ export default function JobListing() {
         ? prev.filter((s) => s !== id)
         : [...prev, id],
     );
+  };
+
+  const handleApplyPreset = (preset: JobPreset) => {
+    const postedUntil = new Date();
+    postedUntil.setDate(postedUntil.getDate() + 30);
+
+    const presetQuestions = JOB_PRESET_QUESTIONS[preset.id] ?? [];
+
+    setFormData((prev) => ({
+      ...prev,
+      job_title: preset.title,
+      job_description: preset.description,
+      minimum_salary: preset.minimum_salary,
+      maximum_salary: preset.maximum_salary,
+      vacant_position: preset.vacant_position,
+      employment_type: preset.employment_type,
+      posted_until: getLocalDateString(postedUntil),
+      requirements: {
+        ...prev.requirements,
+        highest_education: preset.highest_education,
+        experience: preset.experience,
+      },
+      screening_questions:
+        presetQuestions.length > 0
+          ? presetQuestions.map((question) => ({
+              screening_question: question,
+            }))
+          : [{ screening_question: "" }],
+    }));
+
+    setSelectedSkillIds(preset.skillIds);
   };
 
   const token = localStorage.getItem("token");
@@ -193,6 +255,7 @@ export default function JobListing() {
             handleNext={() =>
               setSteps((prev) => prev + 1)
             }
+            handleApplyPreset={handleApplyPreset}
           />
         );
 
@@ -272,6 +335,7 @@ export default function JobListing() {
             button_color="bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={() => {
               setSuccess(false);
+              resetJobForm();
             }}
           />
         </div>
@@ -292,6 +356,145 @@ export default function JobListing() {
 }
 
 // ============================================================
+// PRESET JOBS
+// ============================================================
+
+function PresetJobs({
+  selectedJobTitle,
+  onApplyPreset,
+}: {
+  selectedJobTitle: string;
+  onApplyPreset: (preset: JobPreset) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const selectedPreset = JOB_PRESETS.find(
+    (preset) => preset.title === selectedJobTitle,
+  );
+
+  return (
+    <div className="mb-6 rounded-md border border-[#E3E0D8] bg-white overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-[#FAF9F6] transition-colors"
+        aria-expanded={isExpanded}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#F1EFE9] border border-[#E3E0D8] shrink-0">
+            <FaClipboardList className="text-[#6B6F76] text-sm" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="archivo text-sm font-medium text-[#1C2321]">
+                Job presets
+              </span>
+
+              <span className="archivo text-[10px] text-[#6B6F76] border border-[#E3E0D8] rounded-full px-2 py-0.5">
+                {JOB_PRESETS.length} available
+              </span>
+            </div>
+
+            <p className="archivo text-xs text-[#6B6F76] mt-0.5 truncate">
+              {selectedPreset
+                ? `Selected: ${selectedPreset.title} — click to change`
+                : "Quickly fill job details, requirements, questions, and skills"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedPreset && (
+            <span
+              className={`hidden sm:inline-block archivo text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${
+                selectedPreset.category === "Blue-Collar"
+                  ? "text-[#8A5A00] bg-[#FFF8E7] border-[#E7D7A8]"
+                  : "text-[#345A8C] bg-[#EEF5FC] border-[#C9DDF2]"
+              }`}
+            >
+              {selectedPreset.category === "Blue-Collar" ? "Blue" : "White"}
+            </span>
+          )}
+
+          {isExpanded ? (
+            <FaChevronUp className="text-[#6B6F76] text-xs" />
+          ) : (
+            <FaChevronDown className="text-[#6B6F76] text-xs" />
+          )}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-[#E3E0D8] p-4 bg-[#FAF9F6]">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <span className="archivo block text-xs font-medium text-[#1C2321]">
+                Choose a preset
+              </span>
+              <span className="archivo block text-[11px] text-[#6B6F76] mt-0.5">
+                This will replace the current preset-filled details, questions, and skills.
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
+            {JOB_PRESETS.map((preset) => {
+              const isSelected = selectedJobTitle === preset.title;
+
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    onApplyPreset(preset);
+                    setIsExpanded(false);
+                  }}
+                  className={`text-left rounded-md border p-3 transition-all ${
+                    isSelected
+                      ? "border-red-800 bg-white ring-1 ring-red-800"
+                      : "border-[#D8D5CD] bg-white hover:border-red-800/50 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="archivo text-sm font-semibold text-[#1C2321]">
+                      {preset.title}
+                    </span>
+
+                    <span
+                      className={`archivo text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${
+                        preset.category === "Blue-Collar"
+                          ? "text-[#8A5A00] bg-[#FFF8E7] border-[#E7D7A8]"
+                          : "text-[#345A8C] bg-[#EEF5FC] border-[#C9DDF2]"
+                      }`}
+                    >
+                      {preset.category === "Blue-Collar" ? "Blue" : "White"}
+                    </span>
+                  </div>
+
+                  <p className="archivo text-[11px] text-[#6B6F76] mt-1.5 line-clamp-2 leading-relaxed">
+                    {preset.description}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-[#E3E0D8]">
+                    <span className="archivo text-[10px] text-[#6B6F76]">
+                      {preset.skillIds.length} skills
+                    </span>
+                    <span className="archivo text-[10px] text-red-800">
+                      {JOB_PRESET_QUESTIONS[preset.id]?.length ?? 0} questions
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // JOB DETAILS COMPONENT (STEP 1)
 // ============================================================
 
@@ -300,6 +503,7 @@ function JobDetails({
   handleChange,
   handleNext,
   handleBack,
+  handleApplyPreset,
 }: {
   formData: FormDataState;
   handleChange: (
@@ -309,6 +513,7 @@ function JobDetails({
   ) => void;
   handleNext: () => void;
   handleBack: () => void;
+  handleApplyPreset: (preset: JobPreset) => void;
 }) {
   const currentDate = new Date().toISOString();
 
@@ -341,7 +546,20 @@ function JobDetails({
               Job details
             </h2>
 
-            <div className="grid grid-cols-2 gap-6">
+            <PresetJobs
+              selectedJobTitle={formData.job_title}
+              onApplyPreset={handleApplyPreset}
+            />
+
+            <div className="border-t border-[#E3E0D8] pt-7">
+              <div className="flex items-center gap-2 mb-5">
+                <span className="archivo text-xs uppercase tracking-wide text-[#6B6F76]">
+                  Custom details
+                </span>
+                <span className="h-px flex-1 bg-[#E3E0D8]" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className={labelClass}>
                   Job title
@@ -451,6 +669,7 @@ function JobDetails({
                 />
               </div>
             </div>
+          </div>
           </div>
 
           <div className="border-t border-[#E3E0D8] px-8 md:px-10 py-4 flex items-center justify-end gap-3 bg-[#FAF9F6]">
@@ -1156,7 +1375,7 @@ const STEPS = [
   "Requirements",
   "Screening",
   "Skills",
-  "Review & Post",
+  "Confirm & Post",
 ];
 
 type JobFormStepperProps = {

@@ -1,8 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDtfdBr5WETJqQWgSvoJskBrga7Rh5HSNc",
+  apiKey: "AIzaSyDtfdBr5WETjQWgSvoJskBrga7Rh5HSNc",
   authDomain: "profiteknik.firebaseapp.com",
   projectId: "profiteknik",
   storageBucket: "profiteknik.firebasestorage.app",
@@ -13,3 +14,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
+export const storage = getStorage(app);

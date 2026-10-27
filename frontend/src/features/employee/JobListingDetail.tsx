@@ -16,6 +16,27 @@ import { MdDelete, MdKeyboardArrowDown } from "react-icons/md";
 
 const COLLAPSE_RATIO = 0.6;
 
+const EMPLOYMENT_TYPE_SUGGESTIONS = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Internship",
+  "Temporary",
+];
+
+type EditDraft = {
+  job_title: string;
+  job_description: string;
+  employment_type: string;
+  vacant_position: number | "";
+  minimum_salary: number | "";
+  maximum_salary: number | "";
+  posted_at: string; // yyyy-MM-dd
+  posted_until: string; // yyyy-MM-dd
+  highest_education: string;
+  experience: number | "";
+};
+
 export default function JobListingDetail() {
   const [jobListingData, setJobListingData] =
     useState<JobListingDetailData>();
@@ -38,6 +59,15 @@ export default function JobListingDetail() {
   const [naturalTop, setNaturalTop] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [topCollapsed, setTopCollapsed] = useState<boolean>(false);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Record<string, string[]>
+  >({});
 
   const [searchParams] = useSearchParams();
   const job_id = searchParams.get("job_id");
@@ -70,6 +100,12 @@ export default function JobListingDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Refetch without toggling the full-page loading state
+  const refreshJobDetail = async (id: string) => {
+    const response = await jobListingApi.getJobListing(Number(id));
+    setJobListingData(response.data);
   };
 
   /*
@@ -139,6 +175,9 @@ export default function JobListingDetail() {
   const startDrag = (
     e: ReactPointerEvent<HTMLDivElement>
   ) => {
+    // Layout changes while editing, so dragging is disabled
+    if (isEditing) return;
+
     e.preventDefault();
 
     const natural =
@@ -207,6 +246,121 @@ export default function JobListingDetail() {
 
   /*
   |--------------------------------------------------------------------------
+  | Edit Handlers
+  |--------------------------------------------------------------------------
+  */
+
+  const setField = <K extends keyof EditDraft>(
+    key: K,
+    value: EditDraft[K]
+  ) => setDraft((d) => (d ? { ...d, [key]: value } : d));
+
+  const numberOrEmpty = (value: string): number | "" =>
+    value === "" ? "" : Number(value);
+
+  const startEdit = () => {
+    if (!jobListingData) return;
+
+    // Expand the top panel and clear any drag offset
+    resetTop();
+
+    setSaveError(null);
+    setFieldErrors({});
+
+    setDraft({
+      job_title: jobListingData.job_title ?? "",
+      job_description: jobListingData.job_description ?? "",
+      employment_type: jobListingData.employment_type ?? "",
+      vacant_position: jobListingData.vacant_position ?? "",
+      minimum_salary: jobListingData.minimum_salary ?? "",
+      maximum_salary: jobListingData.maximum_salary ?? "",
+      posted_at: String(jobListingData.posted_at ?? "").slice(0, 10),
+      posted_until: String(
+        jobListingData.posted_until ?? ""
+      ).slice(0, 10),
+      highest_education:
+        jobListingData.requirements?.highest_education ?? "",
+      experience: jobListingData.requirements?.experience ?? "",
+    });
+
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setDraft(null);
+    setSaveError(null);
+    setFieldErrors({});
+  };
+
+  const saveEdit = async () => {
+    if (!draft || !job_id) return;
+
+    // Quick client-side checks (the server validates too)
+    if (!draft.job_title.trim()) {
+      setSaveError("Job title is required.");
+      return;
+    }
+
+    if (
+      draft.minimum_salary === "" ||
+      draft.maximum_salary === "" ||
+      draft.vacant_position === ""
+    ) {
+      setSaveError(
+        "Vacant positions and both salary fields are required."
+      );
+      return;
+    }
+
+    if (Number(draft.minimum_salary) > Number(draft.maximum_salary)) {
+      setSaveError("Minimum salary cannot exceed maximum salary.");
+      return;
+    }
+
+    if (draft.posted_until < draft.posted_at) {
+      setSaveError(
+        "The 'Until' date cannot be before the posted date."
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setSaveError(null);
+      setFieldErrors({});
+
+      const { highest_education, experience, ...rest } = draft;
+
+      await jobListingApi.updateJobListing(job_id, {
+        ...rest,
+        requirements: {
+          highest_education,
+          experience: experience === "" ? null : experience,
+        },
+      });
+
+      // Refetch so the page always shows what's actually in the database
+      await refreshJobDetail(job_id);
+
+      cancelEdit();
+    } catch (err: any) {
+      if (err.response?.status === 422) {
+        setFieldErrors(err.response.data.errors ?? {});
+        setSaveError("Please fix the highlighted fields.");
+      } else {
+        setSaveError(
+          err.response?.data?.message ||
+            "Failed to save changes."
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
   | Loading / Error States
   |--------------------------------------------------------------------------
   */
@@ -267,6 +421,18 @@ export default function JobListingDetail() {
 
   const labelClass =
     "archivo text-[11px] font-semibold uppercase tracking-wider text-[#6B6F76] mb-1 block";
+
+  const inputClass =
+    "w-full text-xs text-[#1C2321] bg-white border border-[#D8D5CD] rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#991B1B]";
+
+  const fieldError = (key: string) =>
+    fieldErrors[key]?.[0] ? (
+      <span className="text-[10px] text-[#991B1B] block mt-0.5">
+        {fieldErrors[key][0]}
+      </span>
+    ) : null;
+
+  const editing = isEditing && draft !== null;
 
   const statusStyle = (
     status?: string | null
@@ -385,39 +551,77 @@ export default function JobListingDetail() {
           >
             {/* Action Buttons */}
             <div className="w-full px-3 flex justify-end gap-3">
-              <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition">
-                <FaRegEdit
-                  size={18}
-                  color="bg-zinc-200"
-                />
+              {editing ? (
+                <>
+                  <button
+                    onClick={saveEdit}
+                    disabled={saving}
+                    className="archivo w-24 py-2 rounded-md bg-[#991B1B] text-white text-sm font-medium shadow hover:bg-[#7F1D1D] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </button>
 
-                <p className="archivo font-medium text-sm text-zinc-600">
-                  Edit
-                </p>
-              </button>
+                  <button
+                    onClick={cancelEdit}
+                    disabled={saving}
+                    className="archivo w-24 py-2 rounded-md border-2 border-zinc-200 bg-white text-sm font-medium text-zinc-600 shadow hover:bg-gray-100 disabled:opacity-50 transition"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={startEdit}
+                    className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-yellow-100 transition"
+                  >
+                    <FaRegEdit
+                      size={18}
+                      color="bg-zinc-200"
+                    />
 
-              <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
-                <MdDelete size={18} />
+                    <p className="archivo font-medium text-sm text-zinc-600">
+                      Edit
+                    </p>
+                  </button>
 
-                <p className="archivo font-medium text-sm text-zinc-600">
-                  Delete
-                </p>
-              </button>
+                  <button className="w-24 py-2 border-2 border-zinc-200 rounded-md shadow flex items-center justify-center gap-1 hover:scale-110 hover:bg-red-100 transition">
+                    <MdDelete size={18} />
 
-              <button
-                className="w-24 py-2 rounded-md border border-gray-200 shadow-sm flex items-center justify-center hover:scale-110 hover:bg-gray-100 transition"
-                onClick={() =>
-                  navigate(-1)
-                }
-              >
-                <IoReturnUpBackSharp
-                  size={21}
-                />
-              </button>
+                    <p className="archivo font-medium text-sm text-zinc-600">
+                      Delete
+                    </p>
+                  </button>
+
+                  <button
+                    className="w-24 py-2 rounded-md border border-gray-200 shadow-sm flex items-center justify-center hover:scale-110 hover:bg-gray-100 transition"
+                    onClick={() =>
+                      navigate(-1)
+                    }
+                  >
+                    <IoReturnUpBackSharp
+                      size={21}
+                    />
+                  </button>
+                </>
+              )}
             </div>
 
+            {/* Save error banner */}
+            {saveError && (
+              <div className="mx-3 -mt-3 text-xs text-[#991B1B] bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
+                {saveError}
+              </div>
+            )}
+
             {/* Job Overview */}
-            <div className="w-full bg-white border border-[#E3E0D8] rounded-xl p-5 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div
+              className={`w-full bg-white border rounded-xl p-5 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6 ${
+                editing
+                  ? "border-[#991B1B]/40"
+                  : "border-[#E3E0D8]"
+              }`}
+            >
 
               {/* Left: Job Information */}
               <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#E3E0D8] pb-4 lg:pb-0 lg:pr-6 flex flex-col justify-between">
@@ -428,16 +632,40 @@ export default function JobListingDetail() {
                       {jobListingData.job_id}
                     </span>
 
-                    <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Active
-                    </span>
+                    {editing ? (
+                      <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        Editing
+                      </span>
+                    ) : (
+                      <span className="archivo text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Active
+                      </span>
+                    )}
                   </div>
 
-                  <h1 className="archivo text-2xl text-[#1C2321] mb-3 font-bold leading-tight">
-                    {jobListingData.job_title}
-                  </h1>
+                  {/* Title */}
+                  {editing && draft ? (
+                    <div className="mb-3">
+                      <input
+                        className={`${inputClass} text-base font-bold`}
+                        value={draft.job_title}
+                        onChange={(e) =>
+                          setField(
+                            "job_title",
+                            e.target.value
+                          )
+                        }
+                      />
+                      {fieldError("job_title")}
+                    </div>
+                  ) : (
+                    <h1 className="archivo text-2xl text-[#1C2321] mb-3 font-bold leading-tight">
+                      {jobListingData.job_title}
+                    </h1>
+                  )}
 
                   <div className="grid grid-cols-2 gap-2 mb-2">
+                    {/* Employment type */}
                     <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
                       <span
                         className={labelClass}
@@ -445,13 +673,41 @@ export default function JobListingDetail() {
                         Employment Type
                       </span>
 
-                      <span className="text-xs font-semibold text-[#1C2321]">
-                        {
-                          jobListingData.employment_type
-                        }
-                      </span>
+                      {editing && draft ? (
+                        <>
+                          <input
+                            list="employment-type-options"
+                            className={inputClass}
+                            value={draft.employment_type}
+                            onChange={(e) =>
+                              setField(
+                                "employment_type",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <datalist id="employment-type-options">
+                            {EMPLOYMENT_TYPE_SUGGESTIONS.map(
+                              (t) => (
+                                <option
+                                  key={t}
+                                  value={t}
+                                />
+                              )
+                            )}
+                          </datalist>
+                          {fieldError("employment_type")}
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-[#1C2321]">
+                          {
+                            jobListingData.employment_type
+                          }
+                        </span>
+                      )}
                     </div>
 
+                    {/* Vacant positions */}
                     <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8]">
                       <span
                         className={labelClass}
@@ -459,15 +715,36 @@ export default function JobListingDetail() {
                         Vacant Positions
                       </span>
 
-                      <span className="text-xs font-semibold text-[#1C2321]">
-                        {
-                          jobListingData.vacant_position
-                        }{" "}
-                        Position(s)
-                      </span>
+                      {editing && draft ? (
+                        <>
+                          <input
+                            type="number"
+                            min={1}
+                            className={inputClass}
+                            value={draft.vacant_position}
+                            onChange={(e) =>
+                              setField(
+                                "vacant_position",
+                                numberOrEmpty(
+                                  e.target.value
+                                )
+                              )
+                            }
+                          />
+                          {fieldError("vacant_position")}
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-[#1C2321]">
+                          {
+                            jobListingData.vacant_position
+                          }{" "}
+                          Position(s)
+                        </span>
+                      )}
                     </div>
                   </div>
 
+                  {/* Salary */}
                   <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] mb-2">
                     <span
                       className={labelClass}
@@ -475,15 +752,60 @@ export default function JobListingDetail() {
                       Salary Range
                     </span>
 
-                    <span className="text-xs font-bold text-[#991B1B]">
-                      ₱
-                      {jobListingData.minimum_salary.toLocaleString()}
-                      {" – "}
-                      ₱
-                      {jobListingData.maximum_salary.toLocaleString()}
-                    </span>
+                    {editing && draft ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="Min"
+                            className={inputClass}
+                            value={draft.minimum_salary}
+                            onChange={(e) =>
+                              setField(
+                                "minimum_salary",
+                                numberOrEmpty(
+                                  e.target.value
+                                )
+                              )
+                            }
+                          />
+
+                          <span className="text-xs text-[#6B6F76]">
+                            –
+                          </span>
+
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="Max"
+                            className={inputClass}
+                            value={draft.maximum_salary}
+                            onChange={(e) =>
+                              setField(
+                                "maximum_salary",
+                                numberOrEmpty(
+                                  e.target.value
+                                )
+                              )
+                            }
+                          />
+                        </div>
+                        {fieldError("minimum_salary")}
+                        {fieldError("maximum_salary")}
+                      </>
+                    ) : (
+                      <span className="text-xs font-bold text-[#991B1B]">
+                        ₱
+                        {jobListingData.minimum_salary.toLocaleString()}
+                        {" – "}
+                        ₱
+                        {jobListingData.maximum_salary.toLocaleString()}
+                      </span>
+                    )}
                   </div>
 
+                  {/* Description */}
                   <div>
                     <span
                       className={labelClass}
@@ -491,29 +813,88 @@ export default function JobListingDetail() {
                       Description
                     </span>
 
-                    <p className="text-xs text-[#1C2321] bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] leading-relaxed line-clamp-2">
-                      {
-                        jobListingData.job_description
-                      }
-                    </p>
+                    {editing && draft ? (
+                      <>
+                        <textarea
+                          rows={4}
+                          className={`${inputClass} leading-relaxed resize-y`}
+                          value={draft.job_description}
+                          onChange={(e) =>
+                            setField(
+                              "job_description",
+                              e.target.value
+                            )
+                          }
+                        />
+                        {fieldError("job_description")}
+                      </>
+                    ) : (
+                      <p className="text-xs text-[#1C2321] bg-[#FAF9F6] p-2 rounded-lg border border-[#E3E0D8] leading-relaxed line-clamp-2">
+                        {
+                          jobListingData.job_description
+                        }
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-[#E3E0D8] flex justify-between text-[10px] text-[#6B6F76] archivo">
-                  <span>
-                    Posted:{" "}
-                    {new Date(
-                      jobListingData.posted_at
-                    ).toLocaleDateString()}
-                  </span>
+                {/* Dates */}
+                {editing && draft ? (
+                  <div className="mt-2 pt-2 border-t border-[#E3E0D8] grid grid-cols-2 gap-2">
+                    <div>
+                      <span className={labelClass}>
+                        Posted
+                      </span>
+                      <input
+                        type="date"
+                        className={inputClass}
+                        value={draft.posted_at}
+                        onChange={(e) =>
+                          setField(
+                            "posted_at",
+                            e.target.value
+                          )
+                        }
+                      />
+                      {fieldError("posted_at")}
+                    </div>
 
-                  <span>
-                    Until:{" "}
-                    {new Date(
-                      jobListingData.posted_until
-                    ).toLocaleDateString()}
-                  </span>
-                </div>
+                    <div>
+                      <span className={labelClass}>
+                        Until
+                      </span>
+                      <input
+                        type="date"
+                        className={inputClass}
+                        value={draft.posted_until}
+                        min={draft.posted_at || undefined}
+                        onChange={(e) =>
+                          setField(
+                            "posted_until",
+                            e.target.value
+                          )
+                        }
+                      />
+                      {fieldError("posted_until")}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 pt-2 border-t border-[#E3E0D8] flex justify-between text-[10px] text-[#6B6F76] archivo">
+                    <span>
+                      Posted:{" "}
+                      {new Date(
+                        jobListingData.posted_at
+                      ).toLocaleDateString()}
+                    </span>
+
+                    <span>
+                      Until:{" "}
+                      {new Date(
+                        jobListingData.posted_until
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Center: Statistics */}
@@ -630,7 +1011,7 @@ export default function JobListingDetail() {
                 </div>
 
                 {/* Qualifications */}
-                {jobListingData.requirements && (
+                {(jobListingData.requirements || editing) && (
                   <div className="mt-2 bg-[#FAF9F6] p-2 rounded-xl border border-[#E3E0D8]">
                     <span
                       className={labelClass}
@@ -638,26 +1019,74 @@ export default function JobListingDetail() {
                       Qualifications
                     </span>
 
-                    <div className="flex justify-between text-xs text-[#1C2321] font-medium">
-                      <span>
-                        Education:{" "}
-                        {
-                          jobListingData
-                            .requirements
-                            .highest_education
-                        }
-                      </span>
+                    {editing && draft ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[10px] text-[#6B6F76] block mb-0.5">
+                            Education
+                          </span>
+                          <input
+                            className={inputClass}
+                            value={draft.highest_education}
+                            onChange={(e) =>
+                              setField(
+                                "highest_education",
+                                e.target.value
+                              )
+                            }
+                          />
+                          {fieldError(
+                            "requirements.highest_education"
+                          )}
+                        </div>
 
-                      <span>
-                        Experience:{" "}
-                        {
-                          jobListingData
-                            .requirements
-                            .experience
-                        }{" "}
-                        yr(s)
-                      </span>
-                    </div>
+                        <div>
+                          <span className="text-[10px] text-[#6B6F76] block mb-0.5">
+                            Experience (yrs)
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            className={inputClass}
+                            value={draft.experience}
+                            onChange={(e) =>
+                              setField(
+                                "experience",
+                                numberOrEmpty(
+                                  e.target.value
+                                )
+                              )
+                            }
+                          />
+                          {fieldError(
+                            "requirements.experience"
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      jobListingData.requirements && (
+                        <div className="flex justify-between text-xs text-[#1C2321] font-medium">
+                          <span>
+                            Education:{" "}
+                            {
+                              jobListingData
+                                .requirements
+                                .highest_education
+                            }
+                          </span>
+
+                          <span>
+                            Experience:{" "}
+                            {
+                              jobListingData
+                                .requirements
+                                .experience
+                            }{" "}
+                            yr(s)
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -749,14 +1178,24 @@ export default function JobListingDetail() {
       {!topCollapsed ? (
         <div
           onPointerDown={startDrag}
-          onDoubleClick={resetTop}
-          title="Drag to resize · double-click to reset"
-          className="group w-full h-6 shrink-0 flex items-center justify-center cursor-row-resize touch-none"
+          onDoubleClick={isEditing ? undefined : resetTop}
+          title={
+            isEditing
+              ? "Resizing is disabled while editing"
+              : "Drag to resize · double-click to reset"
+          }
+          className={`group w-full h-6 shrink-0 flex items-center justify-center touch-none ${
+            isEditing
+              ? "cursor-not-allowed opacity-40"
+              : "cursor-row-resize"
+          }`}
         >
           <div
             className={`h-1.5 w-16 rounded-full transition-colors ${
               isDragging
                 ? "bg-[#991B1B]"
+                : isEditing
+                ? "bg-[#D8D5CD]"
                 : "bg-[#D8D5CD] group-hover:bg-[#991B1B]"
             }`}
           />
